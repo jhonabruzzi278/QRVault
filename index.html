@@ -11,59 +11,65 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <header class="app-header">
-    <h1>📦 QRVault</h1>
-    <p>Control de Inventario mediante Códigos QR</p>
-  </header>
-
-  <main>
-    <a class="top-link" href="products.html">Ver catálogo de productos y códigos QR →</a>
-
-    <section id="home-screen">
-      <div class="card">
-        <p>Escanea los códigos QR de los productos para verificar cuáles existen en la base de datos de inventario.</p>
-        <button id="start-scan-btn" class="btn btn--primary">📷 Escanear Código QR</button>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>📦 QRVault</h1>
+        <p>Control de Inventario mediante Códigos QR</p>
       </div>
-    </section>
+      <a class="top-link" href="products.html">Ver catálogo de productos y códigos QR →</a>
+      <div class="sidebar-note">
+        <p><strong>Cómo funciona:</strong> escanea el QR de cada producto con la cámara. La app lo compara al instante contra el inventario registrado y lo marca como encontrado o no registrado.</p>
+      </div>
+    </aside>
 
-    <section id="scan-screen" class="hidden">
-      <div id="reader"></div>
-      <div class="card">
-        <div class="stat-row">
-          <span class="stat-row__label">Productos escaneados</span>
-          <span class="stat-row__value" id="scanned-count">0</span>
+    <main class="content">
+      <section id="home-screen">
+        <div class="card">
+          <p>Escanea los códigos QR de los productos para verificar cuáles existen en la base de datos de inventario.</p>
+          <button id="start-scan-btn" class="btn btn--primary">📷 Escanear Código QR</button>
         </div>
-        <ul class="scanned-list" id="scanned-list"></ul>
-      </div>
-      <div class="btn-row">
-        <button id="stop-scan-btn" class="btn btn--secondary hidden">⏸ Pausar cámara</button>
-        <button id="finish-btn" class="btn btn--danger">✅ Finalizar y Ver Reporte</button>
-      </div>
-    </section>
+      </section>
 
-    <section id="report-screen" class="hidden">
-      <div class="card">
-        <h2 style="margin-top:0;">Reporte de Escaneo</h2>
-        <div class="report-summary">
-          <div class="report-summary__item">
-            <span class="report-summary__value" id="report-total">0</span>
-            <span class="report-summary__label">Escaneados</span>
+      <section id="scan-screen" class="hidden">
+        <div id="reader"></div>
+        <div class="card">
+          <div class="stat-row">
+            <span class="stat-row__label">Productos escaneados</span>
+            <span class="stat-row__value" id="scanned-count">0</span>
           </div>
-          <div class="report-summary__item">
-            <span class="report-summary__value" id="report-found">0</span>
-            <span class="report-summary__label">Encontrados</span>
-          </div>
-          <div class="report-summary__item">
-            <span class="report-summary__value" id="report-missing">0</span>
-            <span class="report-summary__label">Fuera de BD</span>
-          </div>
+          <ul class="scanned-list" id="scanned-list"></ul>
         </div>
-        <h3>Productos no registrados</h3>
-        <ul id="report-missing-list"></ul>
-      </div>
-      <button id="reset-btn" class="btn btn--primary">🔁 Nueva Sesión de Escaneo</button>
-    </section>
-  </main>
+        <div class="btn-row">
+          <button id="stop-scan-btn" class="btn btn--secondary hidden">⏸ Pausar cámara</button>
+          <button id="finish-btn" class="btn btn--danger">✅ Finalizar y Ver Reporte</button>
+        </div>
+      </section>
+
+      <section id="report-screen" class="hidden">
+        <div class="card">
+          <h2 style="margin-top:0;">Reporte de Escaneo</h2>
+          <div class="report-summary">
+            <div class="report-summary__item">
+              <span class="report-summary__value" id="report-total">0</span>
+              <span class="report-summary__label">Escaneados</span>
+            </div>
+            <div class="report-summary__item">
+              <span class="report-summary__value" id="report-found">0</span>
+              <span class="report-summary__label">Encontrados</span>
+            </div>
+            <div class="report-summary__item">
+              <span class="report-summary__value" id="report-missing">0</span>
+              <span class="report-summary__label">Fuera de BD</span>
+            </div>
+          </div>
+          <h3>Productos no registrados</h3>
+          <ul id="report-missing-list"></ul>
+        </div>
+        <button id="reset-btn" class="btn btn--primary">🔁 Nueva Sesión de Escaneo</button>
+      </section>
+    </main>
+  </div>
 
   <div id="toast" class="toast"></div>
 

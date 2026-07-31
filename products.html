@@ -10,25 +10,50 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <header class="app-header">
-    <h1>📦 Catálogo de Productos</h1>
-    <p>20 productos ficticios — sólo P001 a P015 están registrados en la base de datos</p>
-  </header>
-
-  <main style="max-width: 900px;">
-    <a class="top-link" href="index.html">← Volver a Escanear</a>
-    <div class="card">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>📦 Catálogo</h1>
+        <p>20 productos ficticios — sólo P001 a P015 están registrados en la base de datos</p>
+      </div>
+      <a class="top-link" href="index.html">← Volver a Escanear</a>
+      <div class="sidebar-note">
+        <div class="legend">
+          <span class="legend__swatch legend__swatch--registered"></span>
+          <span>Registrado en la base de datos</span>
+        </div>
+        <div class="legend">
+          <span class="legend__swatch legend__swatch--unregistered"></span>
+          <span>No registrado</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row__label">Registrados</span>
+          <span class="stat-row__value" id="registered-count">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row__label">No registrados</span>
+          <span class="stat-row__value" id="unregistered-count">0</span>
+        </div>
+      </div>
       <button class="btn btn--secondary" onclick="window.print()">🖨️ Imprimir códigos QR</button>
-    </div>
-    <div class="products-grid" id="products-grid"></div>
-  </main>
+    </aside>
+
+    <main class="content content--wide">
+      <div class="products-grid" id="products-grid"></div>
+    </main>
+  </div>
 
   <script src="vendor/qrcode.min.js"></script>
   <script src="js/products-data.js"></script>
   <script>
     const grid = document.getElementById('products-grid');
+    let registeredCount = 0;
+    let unregisteredCount = 0;
+
     FULL_CATALOG.forEach(product => {
       const isRegistered = REGISTERED_CODES.includes(product.code);
+      isRegistered ? registeredCount++ : unregisteredCount++;
+
       const card = document.createElement('div');
       card.className = `product-card${isRegistered ? '' : ' product-card--unregistered'}`;
 
@@ -49,6 +74,9 @@
       card.appendChild(nameEl);
       grid.appendChild(card);
     });
+
+    document.getElementById('registered-count').textContent = registeredCount;
+    document.getElementById('unregistered-count').textContent = unregisteredCount;
   </script>
 </body>
 </html>
