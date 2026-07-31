@@ -373,6 +373,47 @@ button, a, #start-scan-btn, #stop-scan-btn, #finish-btn, #reset-btn {
 .product-card__name { font-size: 0.8rem; color: var(--color-text-dim); }
 .product-card--unregistered { outline: 2px dashed var(--color-warning); }
 
+.product-card__delete {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.product-card__delete:hover {
+  background: var(--color-surface-alt);
+}
+
+.manage-products {
+  display: block !important;
+  margin-top: 8px;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: left;
+}
+
+.manage-products__title {
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+
+.manage-products__input {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.search-input {
+  width: 100%;
+  margin-bottom: var(--space);
+}
+
 .top-link {
   display: inline-block;
   margin-bottom: var(--space);

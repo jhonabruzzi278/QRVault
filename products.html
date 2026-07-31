@@ -41,16 +41,26 @@
         </div>
       </div>
       <button id="print-btn" type="button" class="btn btn--secondary">🖨️ Imprimir códigos QR</button>
+
+      <div class="sidebar-note manage-products">
+        <h2 class="card__title manage-products__title">Gestionar inventario</h2>
+        <input id="new-product-code" type="text" placeholder="Código (ej. P021)" class="manual-entry__input manage-products__input" autocomplete="off" autocapitalize="characters" />
+        <input id="new-product-name" type="text" placeholder="Nombre del producto" class="manual-entry__input manage-products__input" autocomplete="off" />
+        <button id="add-product-btn" type="button" class="btn btn--primary">➕ Agregar al inventario</button>
+      </div>
     </aside>
 
     <main class="content content--wide">
+      <input id="search-input" type="text" placeholder="🔎 Buscar por código o nombre..." class="manual-entry__input search-input" autocomplete="off" />
       <div class="products-grid" id="products-grid"></div>
+      <p id="no-results" class="install-hint hidden">No se encontraron productos que coincidan con la búsqueda.</p>
     </main>
   </div>
 
   <script src="js/error-handler.js"></script>
   <script src="vendor/qrcode.min.js"></script>
   <script src="js/products-data.js"></script>
+  <script src="js/db.js"></script>
   <script src="js/products.js"></script>
   <script src="js/sw-update.js"></script>
 </body>
