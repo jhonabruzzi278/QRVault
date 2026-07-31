@@ -170,8 +170,14 @@ button, a, #start-scan-btn, #stop-scan-btn, #finish-btn, #reset-btn {
 
 .btn-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 10px;
+}
+
+.btn-row .btn {
+  flex: 1 1 120px;
+  min-width: 0;
 }
 
 .scanner-controls {
@@ -315,6 +321,26 @@ button, a, #start-scan-btn, #stop-scan-btn, #finish-btn, #reset-btn {
 
 .legend__swatch--registered { box-shadow: inset 0 0 0 2px var(--color-accent); }
 .legend__swatch--unregistered { box-shadow: inset 0 0 0 2px var(--color-warning); border-style: dashed; }
+
+/* ---------------------------------------------------------------
+   Tablet: still a single stacked column (sidebar above content, same
+   as mobile), but the shell is allowed to breathe instead of staying
+   pinned at phone width — otherwise a 768px tablet renders the same
+   480px column as a phone with huge empty margins on both sides.
+------------------------------------------------------------------ */
+@media (min-width: 640px) {
+  .app-shell {
+    max-width: 720px;
+  }
+
+  .content--wide {
+    max-width: none;
+  }
+
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
 
 /* ---------------------------------------------------------------
    Desktop: two-pane dashboard. The sidebar becomes a sticky left
