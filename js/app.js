@@ -29,6 +29,11 @@ function cacheEls() {
   els.iosInstallHint = document.getElementById('ios-install-hint');
   els.torchBtn = document.getElementById('torch-btn');
   els.switchCameraBtn = document.getElementById('switch-camera-btn');
+  els.diagBtn = document.getElementById('diag-btn');
+  els.diagOverlay = document.getElementById('diag-overlay');
+  els.diagOutput = document.getElementById('diag-output');
+  els.diagCloseBtn = document.getElementById('diag-close-btn');
+  els.diagCopyBtn = document.getElementById('diag-copy-btn');
 }
 
 function isRunningStandalone() {
@@ -180,6 +185,69 @@ function scheduleTorchDetection() {
   setTimeout(attempt, 1500);
 }
 
+function safeJson(value) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (err) {
+    return String(value);
+  }
+}
+
+function runTorchDiagnostics() {
+  const lines = [];
+  lines.push('User-Agent:');
+  lines.push(navigator.userAgent);
+  lines.push('');
+
+  const supportedConstraints =
+    navigator.mediaDevices && navigator.mediaDevices.getSupportedConstraints
+      ? navigator.mediaDevices.getSupportedConstraints()
+      : null;
+  lines.push('getSupportedConstraints().torch: ' + (supportedConstraints ? supportedConstraints.torch : 'n/a'));
+  lines.push('');
+
+  lines.push('--- html5-qrcode wrapper ---');
+  try {
+    const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
+    const torchFeature = capabilities.torchFeature();
+    lines.push('torchFeature.isSupported(): ' + torchFeature.isSupported());
+    if (typeof torchFeature.value === 'function') {
+      lines.push('torchFeature.value(): ' + torchFeature.value());
+    }
+  } catch (err) {
+    lines.push('Error: ' + (err && err.message ? err.message : err));
+  }
+  lines.push('');
+
+  lines.push('--- Native MediaStreamTrack ---');
+  const track = getActiveVideoTrack();
+  if (!track) {
+    lines.push('No se encontró un video track activo (¿la cámara sigue iniciando?).');
+  } else {
+    lines.push('label: ' + track.label);
+    lines.push('readyState: ' + track.readyState);
+    lines.push('typeof track.getCapabilities: ' + typeof track.getCapabilities);
+    if (typeof track.getCapabilities === 'function') {
+      try {
+        lines.push('getCapabilities(): ' + safeJson(track.getCapabilities()));
+      } catch (err) {
+        lines.push('getCapabilities() error: ' + (err && err.message ? err.message : err));
+      }
+    }
+    if (typeof track.getSettings === 'function') {
+      try {
+        lines.push('');
+        lines.push('getSettings(): ' + safeJson(track.getSettings()));
+      } catch (err) {
+        // ignore
+      }
+    }
+  }
+
+  els.diagOutput.textContent = lines.join('\n');
+  els.diagOverlay.classList.remove('hidden');
+}
+
 async function startCamera(facingMode) {
   html5QrCode = new Html5Qrcode('reader');
   const config = { fps: 10, qrbox: { width: 250, height: 250 } };
@@ -197,6 +265,7 @@ async function startCamera(facingMode) {
   els.torchBtn.classList.add('hidden');
   scheduleTorchDetection();
   els.switchCameraBtn.classList.remove('hidden');
+  els.diagBtn.classList.remove('hidden');
 }
 
 async function startScanning() {
@@ -233,6 +302,7 @@ async function stopScanning() {
   els.stopBtn.classList.add('hidden');
   els.torchBtn.classList.add('hidden');
   els.switchCameraBtn.classList.add('hidden');
+  els.diagBtn.classList.add('hidden');
 }
 
 async function toggleTorch() {
@@ -337,6 +407,16 @@ async function init() {
   els.resetBtn.addEventListener('click', resetSession);
   els.torchBtn.addEventListener('click', toggleTorch);
   els.switchCameraBtn.addEventListener('click', switchCamera);
+  els.diagBtn.addEventListener('click', runTorchDiagnostics);
+  els.diagCloseBtn.addEventListener('click', () => els.diagOverlay.classList.add('hidden'));
+  els.diagCopyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(els.diagOutput.textContent);
+      showToast('Diagnóstico copiado.', 'success');
+    } catch (err) {
+      showToast('No se pudo copiar automáticamente.', 'warning');
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);

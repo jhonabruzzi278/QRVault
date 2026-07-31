@@ -43,6 +43,7 @@
           <button id="torch-btn" type="button" class="btn btn--secondary hidden">🔦 Linterna</button>
           <button id="switch-camera-btn" type="button" class="btn btn--secondary hidden">🔄 Girar cámara</button>
         </div>
+        <button id="diag-btn" type="button" class="btn btn--secondary hidden diag-trigger">🔍 Diagnóstico de linterna (temporal)</button>
         <div class="card">
           <div class="stat-row">
             <span class="stat-row__label">Productos escaneados</span>
@@ -82,6 +83,17 @@
   </div>
 
   <div id="toast" class="toast"></div>
+
+  <div id="diag-overlay" class="diag-overlay hidden">
+    <div class="diag-overlay__panel">
+      <div class="diag-overlay__header">
+        <strong>Diagnóstico de linterna</strong>
+        <button id="diag-close-btn" type="button" class="diag-overlay__close">✕</button>
+      </div>
+      <pre id="diag-output" class="diag-overlay__output"></pre>
+      <button id="diag-copy-btn" type="button" class="btn btn--secondary">📋 Copiar</button>
+    </div>
+  </div>
 
   <script src="vendor/html5-qrcode.min.js"></script>
   <script src="js/products-data.js"></script>
