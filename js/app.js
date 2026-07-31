@@ -115,17 +115,44 @@ async function handleDecodedCode(rawText) {
   showToast(found ? `✔ ${code} — ${name}` : `✖ ${code} — no registrado`, found ? 'success' : 'error');
 }
 
+function getActiveVideoTrack() {
+  try {
+    const videoEl = els.reader.querySelector('video');
+    const stream = videoEl && videoEl.srcObject;
+    return (stream && stream.getVideoTracks()[0]) || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+// Some Android/Chrome + html5-qrcode version combinations never report
+// torch support through the library's own wrapper even when the camera
+// track genuinely has it, so this also asks the native MediaStreamTrack
+// directly as a fallback before giving up.
 function detectTorchSupport() {
   try {
     const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
-    const torchFeature = capabilities.torchFeature();
-    if (torchFeature.isSupported()) {
+    if (capabilities.torchFeature().isSupported()) {
       els.torchBtn.classList.remove('hidden');
       return true;
     }
   } catch (err) {
-    // el track todavía no expone capabilities; se reintenta más abajo
+    // wrapper no disponible todavía; se intenta el track nativo abajo
   }
+
+  const track = getActiveVideoTrack();
+  if (track && typeof track.getCapabilities === 'function') {
+    try {
+      const nativeCaps = track.getCapabilities();
+      if (nativeCaps && nativeCaps.torch) {
+        els.torchBtn.classList.remove('hidden');
+        return true;
+      }
+    } catch (err) {
+      // getCapabilities no soportado en este navegador/dispositivo
+    }
+  }
+
   els.torchBtn.classList.add('hidden');
   return false;
 }
@@ -210,19 +237,37 @@ async function stopScanning() {
 
 async function toggleTorch() {
   if (!isScanning || !html5QrCode) return;
+  const nextState = !torchOn;
+
+  // Try the library's wrapper first.
   try {
     const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
     const torchFeature = capabilities.torchFeature();
-    if (!torchFeature.isSupported()) {
-      showToast('Este dispositivo no tiene linterna disponible.', 'warning');
+    if (torchFeature.isSupported()) {
+      await torchFeature.apply(nextState);
+      torchOn = nextState;
+      els.torchBtn.textContent = torchOn ? '🔦 Apagar linterna' : '🔦 Linterna';
       return;
     }
-    torchOn = !torchOn;
-    await torchFeature.apply(torchOn);
-    els.torchBtn.textContent = torchOn ? '🔦 Apagar linterna' : '🔦 Linterna';
   } catch (err) {
-    showToast('No se pudo controlar la linterna.', 'error');
+    // sigue con el fallback nativo
   }
+
+  // Fallback: apply the constraint directly on the native video track.
+  const track = getActiveVideoTrack();
+  if (track) {
+    try {
+      await track.applyConstraints({ advanced: [{ torch: nextState }] });
+      torchOn = nextState;
+      els.torchBtn.textContent = torchOn ? '🔦 Apagar linterna' : '🔦 Linterna';
+      return;
+    } catch (err) {
+      showToast('No se pudo controlar la linterna.', 'error');
+      return;
+    }
+  }
+
+  showToast('Este dispositivo no tiene linterna disponible.', 'warning');
 }
 
 async function switchCamera() {
