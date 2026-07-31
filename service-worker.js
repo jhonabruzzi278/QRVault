@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qrvault-cache-v1';
+const CACHE_NAME = 'qrvault-cache-v2';
 const PRECACHE_URLS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const PRECACHE_URLS = [
   './js/app.js',
   './js/db.js',
   './js/products-data.js',
+  './js/sw-update.js',
   './icons/icon.svg',
   './vendor/qrcode.min.js',
   './vendor/html5-qrcode.min.js',
@@ -17,7 +18,16 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  self.skipWaiting();
+  // No self.skipWaiting() here on purpose: the new worker stays in
+  // "waiting" state until the page asks it to take over (see
+  // js/sw-update.js), so users get an "Actualizar" prompt instead of
+  // silently running mixed old/new assets mid-session.
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {

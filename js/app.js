@@ -197,10 +197,6 @@ async function init() {
   els.stopBtn.addEventListener('click', stopScanning);
   els.finishBtn.addEventListener('click', finishScanning);
   els.resetBtn.addEventListener('click', resetSession);
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {});
-  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
