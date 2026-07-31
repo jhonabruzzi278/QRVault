@@ -42,7 +42,7 @@ test('finalizar escaneo guarda una sesión y aparece en el historial', async ({ 
   });
 
   await page.click('#reset-btn');
-  await page.click('#view-history-btn');
+  await page.click('#nav-history-btn');
   await expect(page.locator('.history-item')).toHaveCount(1);
   await expect(page.locator('.history-item__stats')).toContainText('20 escaneados');
   await expect(page.locator('.history-item__stats')).toContainText('15 encontrados');

@@ -3,8 +3,6 @@ let html5QrCode = null;
 let isScanning = false;
 let currentFacingMode = 'environment';
 
-const THEME_STORAGE_KEY = 'qrvault-theme';
-
 // code -> { code, name, found }
 const scannedProducts = new Map();
 
@@ -30,11 +28,11 @@ function cacheEls() {
   els.installBtn = document.getElementById('install-btn');
   els.iosInstallHint = document.getElementById('ios-install-hint');
   els.switchCameraBtn = document.getElementById('switch-camera-btn');
-  els.themeToggleBtn = document.getElementById('theme-toggle-btn');
   els.manualCodeInput = document.getElementById('manual-code-input');
   els.manualCodeBtn = document.getElementById('manual-code-btn');
   els.exportCsvBtn = document.getElementById('export-csv-btn');
-  els.viewHistoryBtn = document.getElementById('view-history-btn');
+  els.navHomeBtn = document.getElementById('nav-home-btn');
+  els.navHistoryBtn = document.getElementById('nav-history-btn');
   els.historyBackBtn = document.getElementById('history-back-btn');
   els.historyList = document.getElementById('history-list');
 }
@@ -72,23 +70,6 @@ function setupInstallPrompt() {
   }
 }
 
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  els.themeToggleBtn.textContent = theme === 'light' ? '☀️ Modo claro' : '🌙 Modo oscuro';
-}
-
-function initTheme() {
-  const saved = localStorage.getItem(THEME_STORAGE_KEY);
-  applyTheme(saved === 'light' ? 'light' : 'dark');
-}
-
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-  const next = current === 'light' ? 'dark' : 'light';
-  localStorage.setItem(THEME_STORAGE_KEY, next);
-  applyTheme(next);
-}
-
 function showToast(message, kind) {
   els.toast.textContent = message;
   els.toast.className = `toast toast--${kind} toast--visible`;
@@ -98,12 +79,19 @@ function showToast(message, kind) {
   }, 2000);
 }
 
+function updateNavActiveState(screenEl) {
+  const isHistory = screenEl === els.historyScreen;
+  els.navHomeBtn.classList.toggle('sidebar-nav__item--active', !isHistory);
+  els.navHistoryBtn.classList.toggle('sidebar-nav__item--active', isHistory);
+}
+
 function switchScreen(screenEl) {
   [els.homeScreen, els.scanScreen, els.reportScreen, els.historyScreen].forEach(s => s.classList.add('hidden'));
   screenEl.classList.remove('hidden');
   screenEl.classList.remove('screen-enter');
   void screenEl.offsetWidth; // restart the CSS animation
   screenEl.classList.add('screen-enter');
+  updateNavActiveState(screenEl);
 }
 
 // Short beep via Web Audio API — no audio file to fetch/cache, and it works
@@ -369,7 +357,6 @@ async function showHistoryScreen() {
 
 async function init() {
   cacheEls();
-  initTheme();
   inventoryDb = await initInventoryDb();
   setupInstallPrompt();
 
@@ -381,14 +368,18 @@ async function init() {
   els.finishBtn.addEventListener('click', finishScanning);
   els.resetBtn.addEventListener('click', resetSession);
   els.switchCameraBtn.addEventListener('click', switchCamera);
-  els.themeToggleBtn.addEventListener('click', toggleTheme);
   els.manualCodeBtn.addEventListener('click', handleManualEntry);
   els.manualCodeInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') handleManualEntry();
   });
   els.exportCsvBtn.addEventListener('click', exportReportCsv);
-  els.viewHistoryBtn.addEventListener('click', showHistoryScreen);
+  els.navHomeBtn.addEventListener('click', () => switchScreen(els.homeScreen));
+  els.navHistoryBtn.addEventListener('click', showHistoryScreen);
   els.historyBackBtn.addEventListener('click', () => switchScreen(els.homeScreen));
+
+  if (new URLSearchParams(window.location.search).get('view') === 'history') {
+    showHistoryScreen();
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
