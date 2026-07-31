@@ -146,6 +146,10 @@ button, a, #start-scan-btn, #stop-scan-btn, #finish-btn, #reset-btn {
   margin-bottom: var(--space);
 }
 
+.card__title {
+  margin-top: 0;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

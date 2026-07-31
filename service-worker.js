@@ -1,13 +1,15 @@
-const CACHE_NAME = 'qrvault-cache-v11';
+const CACHE_NAME = 'qrvault-cache-v12';
 const PRECACHE_URLS = [
   './',
   './index.html',
   './products.html',
   './manifest.json',
   './css/styles.css',
+  './js/error-handler.js',
   './js/app.js',
   './js/db.js',
   './js/products-data.js',
+  './js/products.js',
   './js/sw-update.js',
   './icons/icon.svg',
   './vendor/qrcode.min.js',

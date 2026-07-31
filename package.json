@@ -1,0 +1,13 @@
+{
+  "name": "qrvault",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PWA de control de inventario mediante códigos QR.",
+  "scripts": {
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "http-server": "^14.1.1"
+  }
+}
