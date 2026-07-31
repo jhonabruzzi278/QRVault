@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f1720" />
+  <title>QRVault — Catálogo de Productos</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>📦 Catálogo de Productos</h1>
+    <p>20 productos ficticios — sólo P001 a P015 están registrados en la base de datos</p>
+  </header>
+
+  <main style="max-width: 900px;">
+    <a class="top-link" href="index.html">← Volver a Escanear</a>
+    <div class="card">
+      <button class="btn btn--secondary" onclick="window.print()">🖨️ Imprimir códigos QR</button>
+    </div>
+    <div class="products-grid" id="products-grid"></div>
+  </main>
+
+  <script src="vendor/qrcode.min.js"></script>
+  <script src="js/products-data.js"></script>
+  <script>
+    const grid = document.getElementById('products-grid');
+    FULL_CATALOG.forEach(product => {
+      const isRegistered = REGISTERED_CODES.includes(product.code);
+      const card = document.createElement('div');
+      card.className = `product-card${isRegistered ? '' : ' product-card--unregistered'}`;
+
+      const qr = qrcode(0, 'M');
+      qr.addData(product.code);
+      qr.make();
+      const qrWrapper = document.createElement('div');
+      qrWrapper.innerHTML = qr.createSvgTag({ cellSize: 5, margin: 2 });
+      card.appendChild(qrWrapper);
+
+      const codeEl = document.createElement('div');
+      codeEl.className = 'product-card__code';
+      codeEl.textContent = product.code;
+      const nameEl = document.createElement('div');
+      nameEl.className = 'product-card__name';
+      nameEl.textContent = product.name + (isRegistered ? '' : ' (no registrado)');
+      card.appendChild(codeEl);
+      card.appendChild(nameEl);
+      grid.appendChild(card);
+    });
+  </script>
+</body>
+</html>
