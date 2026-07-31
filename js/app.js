@@ -1,6 +1,8 @@
 let inventoryDb = null;
 let html5QrCode = null;
 let isScanning = false;
+let currentFacingMode = 'environment';
+let torchOn = false;
 
 // code -> { code, name, found }
 const scannedProducts = new Map();
@@ -25,6 +27,8 @@ function cacheEls() {
   els.reportMissingList = document.getElementById('report-missing-list');
   els.installBtn = document.getElementById('install-btn');
   els.iosInstallHint = document.getElementById('ios-install-hint');
+  els.torchBtn = document.getElementById('torch-btn');
+  els.switchCameraBtn = document.getElementById('switch-camera-btn');
 }
 
 function isRunningStandalone() {
@@ -111,22 +115,46 @@ async function handleDecodedCode(rawText) {
   showToast(found ? `✔ ${code} — ${name}` : `✖ ${code} — no registrado`, found ? 'success' : 'error');
 }
 
+async function detectTorchSupport() {
+  try {
+    const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
+    const torchFeature = capabilities.torchFeature();
+    if (torchFeature.isSupported()) {
+      els.torchBtn.classList.remove('hidden');
+    } else {
+      els.torchBtn.classList.add('hidden');
+    }
+  } catch (err) {
+    els.torchBtn.classList.add('hidden');
+  }
+}
+
+async function startCamera(facingMode) {
+  html5QrCode = new Html5Qrcode('reader');
+  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+  await html5QrCode.start(
+    { facingMode },
+    config,
+    (decodedText) => handleDecodedCode(decodedText),
+    () => {}
+  );
+
+  currentFacingMode = facingMode;
+  torchOn = false;
+  els.torchBtn.textContent = '🔦 Linterna';
+  await detectTorchSupport();
+  els.switchCameraBtn.classList.remove('hidden');
+}
+
 async function startScanning() {
   if (isScanning) return;
   isScanning = true;
   els.startBtn.classList.add('hidden');
   els.stopBtn.classList.remove('hidden');
 
-  html5QrCode = new Html5Qrcode('reader');
-  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
   try {
-    await html5QrCode.start(
-      { facingMode: 'environment' },
-      config,
-      (decodedText) => handleDecodedCode(decodedText),
-      () => {}
-    );
+    await startCamera(currentFacingMode);
   } catch (err) {
     showToast('No se pudo acceder a la cámara.', 'error');
     isScanning = false;
@@ -135,17 +163,57 @@ async function startScanning() {
   }
 }
 
-async function stopScanning() {
-  if (!isScanning || !html5QrCode) return;
+async function stopCameraOnly() {
+  if (!html5QrCode) return;
   try {
     await html5QrCode.stop();
     await html5QrCode.clear();
   } catch (err) {
     // cámara ya detenida
   }
+}
+
+async function stopScanning() {
+  if (!isScanning) return;
+  await stopCameraOnly();
   isScanning = false;
   els.startBtn.classList.remove('hidden');
   els.stopBtn.classList.add('hidden');
+  els.torchBtn.classList.add('hidden');
+  els.switchCameraBtn.classList.add('hidden');
+}
+
+async function toggleTorch() {
+  if (!isScanning || !html5QrCode) return;
+  try {
+    const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
+    const torchFeature = capabilities.torchFeature();
+    if (!torchFeature.isSupported()) {
+      showToast('Este dispositivo no tiene linterna disponible.', 'warning');
+      return;
+    }
+    torchOn = !torchOn;
+    await torchFeature.apply(torchOn);
+    els.torchBtn.textContent = torchOn ? '🔦 Apagar linterna' : '🔦 Linterna';
+  } catch (err) {
+    showToast('No se pudo controlar la linterna.', 'error');
+  }
+}
+
+async function switchCamera() {
+  if (!isScanning) return;
+  const nextFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+  try {
+    await stopCameraOnly();
+    await startCamera(nextFacingMode);
+  } catch (err) {
+    showToast('No se pudo cambiar de cámara.', 'error');
+    try {
+      await startCamera(currentFacingMode);
+    } catch (fallbackErr) {
+      // sin cámara disponible; el usuario puede reintentar con "Escanear"
+    }
+  }
 }
 
 function buildReport() {
@@ -197,6 +265,8 @@ async function init() {
   els.stopBtn.addEventListener('click', stopScanning);
   els.finishBtn.addEventListener('click', finishScanning);
   els.resetBtn.addEventListener('click', resetSession);
+  els.torchBtn.addEventListener('click', toggleTorch);
+  els.switchCameraBtn.addEventListener('click', switchCamera);
 }
 
 document.addEventListener('DOMContentLoaded', init);
