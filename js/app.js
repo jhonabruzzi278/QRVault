@@ -3,6 +3,8 @@ let html5QrCode = null;
 let isScanning = false;
 let currentFacingMode = 'environment';
 
+const THEME_STORAGE_KEY = 'qrvault-theme';
+
 // code -> { code, name, found }
 const scannedProducts = new Map();
 
@@ -17,6 +19,7 @@ function cacheEls() {
   els.scanScreen = document.getElementById('scan-screen');
   els.reportScreen = document.getElementById('report-screen');
   els.homeScreen = document.getElementById('home-screen');
+  els.historyScreen = document.getElementById('history-screen');
   els.scannedList = document.getElementById('scanned-list');
   els.scannedCount = document.getElementById('scanned-count');
   els.toast = document.getElementById('toast');
@@ -27,6 +30,13 @@ function cacheEls() {
   els.installBtn = document.getElementById('install-btn');
   els.iosInstallHint = document.getElementById('ios-install-hint');
   els.switchCameraBtn = document.getElementById('switch-camera-btn');
+  els.themeToggleBtn = document.getElementById('theme-toggle-btn');
+  els.manualCodeInput = document.getElementById('manual-code-input');
+  els.manualCodeBtn = document.getElementById('manual-code-btn');
+  els.exportCsvBtn = document.getElementById('export-csv-btn');
+  els.viewHistoryBtn = document.getElementById('view-history-btn');
+  els.historyBackBtn = document.getElementById('history-back-btn');
+  els.historyList = document.getElementById('history-list');
 }
 
 function isRunningStandalone() {
@@ -62,6 +72,23 @@ function setupInstallPrompt() {
   }
 }
 
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  els.themeToggleBtn.textContent = theme === 'light' ? '☀️ Modo claro' : '🌙 Modo oscuro';
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_STORAGE_KEY);
+  applyTheme(saved === 'light' ? 'light' : 'dark');
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  localStorage.setItem(THEME_STORAGE_KEY, next);
+  applyTheme(next);
+}
+
 function showToast(message, kind) {
   els.toast.textContent = message;
   els.toast.className = `toast toast--${kind} toast--visible`;
@@ -72,11 +99,41 @@ function showToast(message, kind) {
 }
 
 function switchScreen(screenEl) {
-  [els.homeScreen, els.scanScreen, els.reportScreen].forEach(s => s.classList.add('hidden'));
+  [els.homeScreen, els.scanScreen, els.reportScreen, els.historyScreen].forEach(s => s.classList.add('hidden'));
   screenEl.classList.remove('hidden');
   screenEl.classList.remove('screen-enter');
   void screenEl.offsetWidth; // restart the CSS animation
   screenEl.classList.add('screen-enter');
+}
+
+// Short beep via Web Audio API — no audio file to fetch/cache, and it works
+// offline just like everything else in this PWA.
+function playBeep(success) {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = success ? 880 : 220;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + 0.15);
+    oscillator.onended = () => ctx.close();
+  } catch (err) {
+    // audio no disponible; el feedback visual/háptico sigue funcionando
+  }
+}
+
+function triggerScanFeedback(found) {
+  if (navigator.vibrate) {
+    navigator.vibrate(found ? 60 : [40, 60, 40]);
+  }
+  playBeep(found);
 }
 
 function renderScannedList() {
@@ -97,6 +154,7 @@ function renderScannedList() {
 
 async function handleDecodedCode(rawText) {
   const code = rawText.trim().toUpperCase();
+  if (!code) return;
 
   if (scannedProducts.has(code)) {
     showToast(`Ya escaneado: ${code}`, 'warning');
@@ -110,12 +168,33 @@ async function handleDecodedCode(rawText) {
 
   scannedProducts.set(code, { code, name, found });
   renderScannedList();
+  triggerScanFeedback(found);
   showToast(found ? `✔ ${code} — ${name}` : `✖ ${code} — no registrado`, found ? 'success' : 'error');
+}
+
+function handleManualEntry() {
+  const value = els.manualCodeInput.value;
+  if (!value.trim()) return;
+  handleDecodedCode(value);
+  els.manualCodeInput.value = '';
+  els.manualCodeInput.focus();
 }
 
 async function startCamera(facingMode) {
   html5QrCode = new Html5Qrcode('reader');
-  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+  const config = {
+    fps: 10,
+    qrbox: { width: 250, height: 250 },
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+    ],
+  };
 
   await html5QrCode.start(
     { facingMode },
@@ -204,9 +283,43 @@ function buildReport() {
   }
 }
 
+function csvEscape(value) {
+  const str = String(value);
+  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function exportReportCsv() {
+  const items = Array.from(scannedProducts.values());
+  const rows = [['codigo', 'nombre', 'estado']];
+  items.forEach(item => {
+    rows.push([item.code, item.name, item.found ? 'encontrado' : 'no_registrado']);
+  });
+
+  const csvContent = rows.map(row => row.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  link.href = url;
+  link.download = `qrvault-reporte-${timestamp}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function finishScanning() {
   await stopScanning();
   buildReport();
+
+  const items = Array.from(scannedProducts.values());
+  await saveSession(inventoryDb, {
+    date: new Date().toISOString(),
+    total: items.length,
+    found: items.filter(i => i.found).length,
+    missing: items.filter(i => !i.found),
+  });
+
   switchScreen(els.reportScreen);
 }
 
@@ -216,8 +329,47 @@ function resetSession() {
   switchScreen(els.homeScreen);
 }
 
+function formatSessionDate(isoDate) {
+  try {
+    return new Date(isoDate).toLocaleString();
+  } catch (err) {
+    return isoDate;
+  }
+}
+
+async function showHistoryScreen() {
+  const sessions = await getAllSessions(inventoryDb);
+  els.historyList.innerHTML = '';
+
+  if (sessions.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'history-item history-item--empty';
+    li.textContent = 'Todavía no hay sesiones de escaneo guardadas.';
+    els.historyList.appendChild(li);
+  } else {
+    sessions.forEach(session => {
+      const li = document.createElement('li');
+      li.className = 'history-item';
+      const missingCodes = session.missing.map(m => m.code).join(', ') || 'Ninguno';
+      li.innerHTML = `
+        <div class="history-item__date">${formatSessionDate(session.date)}</div>
+        <div class="history-item__stats">
+          <span>${session.total} escaneados</span>
+          <span>${session.found} encontrados</span>
+          <span>${session.missing.length} fuera de BD</span>
+        </div>
+        <div class="history-item__missing">${missingCodes}</div>
+      `;
+      els.historyList.appendChild(li);
+    });
+  }
+
+  switchScreen(els.historyScreen);
+}
+
 async function init() {
   cacheEls();
+  initTheme();
   inventoryDb = await initInventoryDb();
   setupInstallPrompt();
 
@@ -229,6 +381,14 @@ async function init() {
   els.finishBtn.addEventListener('click', finishScanning);
   els.resetBtn.addEventListener('click', resetSession);
   els.switchCameraBtn.addEventListener('click', switchCamera);
+  els.themeToggleBtn.addEventListener('click', toggleTheme);
+  els.manualCodeBtn.addEventListener('click', handleManualEntry);
+  els.manualCodeInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') handleManualEntry();
+  });
+  els.exportCsvBtn.addEventListener('click', exportReportCsv);
+  els.viewHistoryBtn.addEventListener('click', showHistoryScreen);
+  els.historyBackBtn.addEventListener('click', () => switchScreen(els.homeScreen));
 }
 
 document.addEventListener('DOMContentLoaded', init);
