@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qrvault-cache-v8';
+const CACHE_NAME = 'qrvault-cache-v9';
 const PRECACHE_URLS = [
   './',
   './index.html',
