@@ -2,7 +2,6 @@ let inventoryDb = null;
 let html5QrCode = null;
 let isScanning = false;
 let currentFacingMode = 'environment';
-let torchOn = false;
 
 // code -> { code, name, found }
 const scannedProducts = new Map();
@@ -27,13 +26,7 @@ function cacheEls() {
   els.reportMissingList = document.getElementById('report-missing-list');
   els.installBtn = document.getElementById('install-btn');
   els.iosInstallHint = document.getElementById('ios-install-hint');
-  els.torchBtn = document.getElementById('torch-btn');
   els.switchCameraBtn = document.getElementById('switch-camera-btn');
-  els.diagBtn = document.getElementById('diag-btn');
-  els.diagOverlay = document.getElementById('diag-overlay');
-  els.diagOutput = document.getElementById('diag-output');
-  els.diagCloseBtn = document.getElementById('diag-close-btn');
-  els.diagCopyBtn = document.getElementById('diag-copy-btn');
 }
 
 function isRunningStandalone() {
@@ -120,98 +113,9 @@ async function handleDecodedCode(rawText) {
   showToast(found ? `✔ ${code} — ${name}` : `✖ ${code} — no registrado`, found ? 'success' : 'error');
 }
 
-function getActiveVideoTrack() {
-  try {
-    const videoEl = els.reader.querySelector('video');
-    const stream = videoEl && videoEl.srcObject;
-    return (stream && stream.getVideoTracks()[0]) || null;
-  } catch (err) {
-    return null;
-  }
-}
-
-function safeJson(value) {
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch (err) {
-    return String(value);
-  }
-}
-
-function runTorchDiagnostics() {
-  const lines = [];
-  lines.push('User-Agent:');
-  lines.push(navigator.userAgent);
-  lines.push('');
-
-  const supportedConstraints =
-    navigator.mediaDevices && navigator.mediaDevices.getSupportedConstraints
-      ? navigator.mediaDevices.getSupportedConstraints()
-      : null;
-  lines.push('getSupportedConstraints().torch: ' + (supportedConstraints ? supportedConstraints.torch : 'n/a'));
-  lines.push('');
-
-  lines.push('--- html5-qrcode wrapper ---');
-  try {
-    const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
-    const torchFeature = capabilities.torchFeature();
-    lines.push('torchFeature.isSupported(): ' + torchFeature.isSupported());
-    if (typeof torchFeature.value === 'function') {
-      lines.push('torchFeature.value(): ' + torchFeature.value());
-    }
-  } catch (err) {
-    lines.push('Error: ' + (err && err.message ? err.message : err));
-  }
-  lines.push('');
-
-  lines.push('--- Native MediaStreamTrack ---');
-  const track = getActiveVideoTrack();
-  if (!track) {
-    lines.push('No se encontró un video track activo (¿la cámara sigue iniciando?).');
-  } else {
-    lines.push('label: ' + track.label);
-    lines.push('readyState: ' + track.readyState);
-    lines.push('typeof track.getCapabilities: ' + typeof track.getCapabilities);
-    if (typeof track.getCapabilities === 'function') {
-      try {
-        lines.push('getCapabilities(): ' + safeJson(track.getCapabilities()));
-      } catch (err) {
-        lines.push('getCapabilities() error: ' + (err && err.message ? err.message : err));
-      }
-    }
-    if (typeof track.getSettings === 'function') {
-      try {
-        lines.push('');
-        lines.push('getSettings(): ' + safeJson(track.getSettings()));
-      } catch (err) {
-        // ignore
-      }
-    }
-  }
-
-  els.diagOutput.textContent = lines.join('\n');
-  els.diagOverlay.classList.remove('hidden');
-}
-
 async function startCamera(facingMode) {
   html5QrCode = new Html5Qrcode('reader');
-
-  // html5-qrcode requires cameraIdOrConfig (1st arg) to have exactly one
-  // key, so facingMode alone goes there. To also request a higher
-  // resolution — low-res capture makes some Android/Chrome pipelines omit
-  // "torch" from getCapabilities() even on hardware that has it — it has
-  // to go through config.videoConstraints instead, which *replaces* the
-  // 1st-arg constraint entirely when present, so facingMode is repeated
-  // inside it too.
-  const config = {
-    fps: 10,
-    qrbox: { width: 250, height: 250 },
-    videoConstraints: {
-      facingMode,
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
-    },
-  };
+  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
   await html5QrCode.start(
     { facingMode },
@@ -221,16 +125,7 @@ async function startCamera(facingMode) {
   );
 
   currentFacingMode = facingMode;
-  torchOn = false;
-  els.torchBtn.textContent = '🔦 Linterna';
-  // Shown unconditionally now: getCapabilities() has proven unreliable on
-  // some devices (reports no "torch" key even with working hardware flash),
-  // so instead of gating visibility on capability detection, the button is
-  // always offered and toggleTorch() just attempts applyConstraints —
-  // failing gracefully with a toast if the device truly doesn't support it.
-  els.torchBtn.classList.remove('hidden');
   els.switchCameraBtn.classList.remove('hidden');
-  els.diagBtn.classList.remove('hidden');
 }
 
 async function startScanning() {
@@ -265,44 +160,7 @@ async function stopScanning() {
   isScanning = false;
   els.startBtn.classList.remove('hidden');
   els.stopBtn.classList.add('hidden');
-  els.torchBtn.classList.add('hidden');
   els.switchCameraBtn.classList.add('hidden');
-  els.diagBtn.classList.add('hidden');
-}
-
-async function toggleTorch() {
-  if (!isScanning || !html5QrCode) return;
-  const nextState = !torchOn;
-
-  // Try the library's wrapper first.
-  try {
-    const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
-    const torchFeature = capabilities.torchFeature();
-    if (torchFeature.isSupported()) {
-      await torchFeature.apply(nextState);
-      torchOn = nextState;
-      els.torchBtn.textContent = torchOn ? '🔦 Apagar linterna' : '🔦 Linterna';
-      return;
-    }
-  } catch (err) {
-    // sigue con el fallback nativo
-  }
-
-  // Fallback: apply the constraint directly on the native video track.
-  const track = getActiveVideoTrack();
-  if (track) {
-    try {
-      await track.applyConstraints({ advanced: [{ torch: nextState }] });
-      torchOn = nextState;
-      els.torchBtn.textContent = torchOn ? '🔦 Apagar linterna' : '🔦 Linterna';
-      return;
-    } catch (err) {
-      showToast('No se pudo controlar la linterna.', 'error');
-      return;
-    }
-  }
-
-  showToast('Este dispositivo no tiene linterna disponible.', 'warning');
 }
 
 async function switchCamera() {
@@ -370,18 +228,7 @@ async function init() {
   els.stopBtn.addEventListener('click', stopScanning);
   els.finishBtn.addEventListener('click', finishScanning);
   els.resetBtn.addEventListener('click', resetSession);
-  els.torchBtn.addEventListener('click', toggleTorch);
   els.switchCameraBtn.addEventListener('click', switchCamera);
-  els.diagBtn.addEventListener('click', runTorchDiagnostics);
-  els.diagCloseBtn.addEventListener('click', () => els.diagOverlay.classList.add('hidden'));
-  els.diagCopyBtn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(els.diagOutput.textContent);
-      showToast('Diagnóstico copiado.', 'success');
-    } catch (err) {
-      showToast('No se pudo copiar automáticamente.', 'warning');
-    }
-  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
