@@ -130,61 +130,6 @@ function getActiveVideoTrack() {
   }
 }
 
-// Some Android/Chrome + html5-qrcode version combinations never report
-// torch support through the library's own wrapper even when the camera
-// track genuinely has it, so this also asks the native MediaStreamTrack
-// directly as a fallback before giving up.
-function detectTorchSupport() {
-  try {
-    const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
-    if (capabilities.torchFeature().isSupported()) {
-      els.torchBtn.classList.remove('hidden');
-      return true;
-    }
-  } catch (err) {
-    // wrapper no disponible todavía; se intenta el track nativo abajo
-  }
-
-  const track = getActiveVideoTrack();
-  if (track && typeof track.getCapabilities === 'function') {
-    try {
-      const nativeCaps = track.getCapabilities();
-      if (nativeCaps && nativeCaps.torch) {
-        els.torchBtn.classList.remove('hidden');
-        return true;
-      }
-    } catch (err) {
-      // getCapabilities no soportado en este navegador/dispositivo
-    }
-  }
-
-  els.torchBtn.classList.add('hidden');
-  return false;
-}
-
-// Some Android/Chrome combinations don't report the "torch" capability on
-// the video track immediately after start() resolves — the capability only
-// becomes available once the stream is actually flowing frames. Re-check on
-// the video's "loadeddata"/"playing" events plus a couple of delayed
-// fallbacks instead of a single immediate check right after start().
-function scheduleTorchDetection() {
-  let found = false;
-  const attempt = () => {
-    if (found) return;
-    if (detectTorchSupport()) found = true;
-  };
-
-  const videoEl = els.reader.querySelector('video');
-  if (videoEl) {
-    videoEl.addEventListener('loadeddata', attempt, { once: true });
-    videoEl.addEventListener('playing', attempt, { once: true });
-  }
-
-  attempt();
-  setTimeout(attempt, 500);
-  setTimeout(attempt, 1500);
-}
-
 function safeJson(value) {
   try {
     return JSON.stringify(value, null, 2);
@@ -278,8 +223,12 @@ async function startCamera(facingMode) {
   currentFacingMode = facingMode;
   torchOn = false;
   els.torchBtn.textContent = '🔦 Linterna';
-  els.torchBtn.classList.add('hidden');
-  scheduleTorchDetection();
+  // Shown unconditionally now: getCapabilities() has proven unreliable on
+  // some devices (reports no "torch" key even with working hardware flash),
+  // so instead of gating visibility on capability detection, the button is
+  // always offered and toggleTorch() just attempts applyConstraints —
+  // failing gracefully with a toast if the device truly doesn't support it.
+  els.torchBtn.classList.remove('hidden');
   els.switchCameraBtn.classList.remove('hidden');
   els.diagBtn.classList.remove('hidden');
 }
