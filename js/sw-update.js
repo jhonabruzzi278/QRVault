@@ -5,6 +5,14 @@
 (function () {
   if (!('serviceWorker' in navigator)) return;
 
+  // Only reload on "controllerchange" if the user actually asked for the
+  // update via the banner below. Without this guard, a brand-new install
+  // also fires "controllerchange" the moment the worker calls
+  // clients.claim() in its own activate handler (going from "no
+  // controller" to "controller"), which would silently reload every
+  // first-time visitor's page for no reason.
+  let userRequestedUpdate = false;
+
   function showUpdateBanner(onReload) {
     if (document.getElementById('sw-update-banner')) return;
 
@@ -16,7 +24,10 @@
       '<button type="button" class="btn btn--primary update-banner__btn">Actualizar</button>';
 
     document.body.appendChild(banner);
-    banner.querySelector('button').addEventListener('click', onReload);
+    banner.querySelector('button').addEventListener('click', () => {
+      userRequestedUpdate = true;
+      onReload();
+    });
     requestAnimationFrame(() => banner.classList.add('update-banner--visible'));
   }
 
@@ -53,7 +64,7 @@
 
     let hasReloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (hasReloaded) return;
+      if (hasReloaded || !userRequestedUpdate) return;
       hasReloaded = true;
       window.location.reload();
     });

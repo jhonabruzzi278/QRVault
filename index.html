@@ -19,11 +19,27 @@
     <aside class="sidebar">
       <div class="brand">
         <h1>📦 QRVault</h1>
-        <p>Control de Inventario mediante Códigos QR</p>
+        <p>Panel de Inventario</p>
       </div>
-      <a class="top-link" href="products.html">Ver catálogo de productos y códigos QR →</a>
+
+      <nav class="sidebar-nav" aria-label="Navegación principal">
+        <button type="button" id="nav-home-btn" class="sidebar-nav__item sidebar-nav__item--active">
+          <span class="sidebar-nav__icon">📷</span><span>Escanear</span>
+        </button>
+        <button type="button" id="nav-history-btn" class="sidebar-nav__item">
+          <span class="sidebar-nav__icon">🕘</span><span>Historial</span>
+        </button>
+        <a href="products.html" class="sidebar-nav__item">
+          <span class="sidebar-nav__icon">📦</span><span>Catálogo</span>
+        </a>
+      </nav>
+
       <div class="sidebar-note">
         <p><strong>Cómo funciona:</strong> escanea el QR de cada producto con la cámara. La app lo compara al instante contra el inventario registrado y lo marca como encontrado o no registrado.</p>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="theme-toggle-btn" type="button" class="btn btn--secondary">🌙 Modo oscuro</button>
       </div>
     </aside>
 
@@ -41,6 +57,13 @@
         <div id="reader"></div>
         <div class="btn-row scanner-controls">
           <button id="switch-camera-btn" type="button" class="btn btn--secondary hidden">🔄 Girar cámara</button>
+        </div>
+        <div class="card manual-entry">
+          <label for="manual-code-input" class="manual-entry__label">¿El QR no escanea? Ingresa el código manualmente</label>
+          <div class="btn-row">
+            <input id="manual-code-input" type="text" placeholder="Ej. P001" class="manual-entry__input" autocomplete="off" autocapitalize="characters" />
+            <button id="manual-code-btn" type="button" class="btn btn--secondary">Agregar</button>
+          </div>
         </div>
         <div class="card">
           <div class="stat-row">
@@ -75,7 +98,18 @@
           <h3>Productos no registrados</h3>
           <ul id="report-missing-list"></ul>
         </div>
-        <button id="reset-btn" class="btn btn--primary">🔁 Nueva Sesión de Escaneo</button>
+        <div class="btn-row">
+          <button id="export-csv-btn" class="btn btn--secondary">⬇️ Exportar CSV</button>
+          <button id="reset-btn" class="btn btn--primary">🔁 Nueva Sesión</button>
+        </div>
+      </section>
+
+      <section id="history-screen" class="hidden">
+        <div class="card">
+          <h2 class="card__title">Historial de Escaneos</h2>
+          <ul id="history-list" class="history-list"></ul>
+        </div>
+        <button id="history-back-btn" type="button" class="btn btn--secondary">← Volver</button>
       </section>
     </main>
   </div>
@@ -83,6 +117,7 @@
   <div id="toast" class="toast"></div>
 
   <script src="js/error-handler.js"></script>
+  <script src="js/theme.js"></script>
   <script src="vendor/html5-qrcode.min.js"></script>
   <script src="js/products-data.js"></script>
   <script src="js/db.js"></script>

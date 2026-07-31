@@ -1,8 +1,10 @@
-// Capa de acceso a datos: IndexedDB almacena únicamente los productos "registrados"
-// (P001-P015), simulando el inventario real contra el cual se valida cada escaneo.
+// Capa de acceso a datos: IndexedDB almacena el inventario de productos
+// registrados (sembrado inicialmente con P001-P015, editable después desde
+// la UI) y el historial de sesiones de escaneo.
 const DB_NAME = 'qrvault-inventory';
-const DB_VERSION = 1;
-const STORE_NAME = 'products';
+const DB_VERSION = 2;
+const STORE_PRODUCTS = 'products';
+const STORE_SESSIONS = 'sessions';
 
 function openInventoryDb() {
   return new Promise((resolve, reject) => {
@@ -10,8 +12,11 @@ function openInventoryDb() {
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'code' });
+      if (!db.objectStoreNames.contains(STORE_PRODUCTS)) {
+        db.createObjectStore(STORE_PRODUCTS, { keyPath: 'code' });
+      }
+      if (!db.objectStoreNames.contains(STORE_SESSIONS)) {
+        db.createObjectStore(STORE_SESSIONS, { keyPath: 'id', autoIncrement: true });
       }
     };
 
@@ -22,8 +27,8 @@ function openInventoryDb() {
 
 async function seedInventoryIfEmpty(db) {
   const count = await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORE_NAME).count();
+    const tx = db.transaction(STORE_PRODUCTS, 'readonly');
+    const req = tx.objectStore(STORE_PRODUCTS).count();
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
@@ -33,8 +38,8 @@ async function seedInventoryIfEmpty(db) {
   const registeredProducts = FULL_CATALOG.filter(p => REGISTERED_CODES.includes(p.code));
 
   await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_PRODUCTS, 'readwrite');
+    const store = tx.objectStore(STORE_PRODUCTS);
     registeredProducts.forEach(p => store.put(p));
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
@@ -49,9 +54,54 @@ async function initInventoryDb() {
 
 function lookupProduct(db, code) {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORE_NAME).get(code);
+    const tx = db.transaction(STORE_PRODUCTS, 'readonly');
+    const req = tx.objectStore(STORE_PRODUCTS).get(code);
     req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function getAllProducts(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_PRODUCTS, 'readonly');
+    const req = tx.objectStore(STORE_PRODUCTS).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function putProduct(db, product) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_PRODUCTS, 'readwrite');
+    tx.objectStore(STORE_PRODUCTS).put(product);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function deleteProduct(db, code) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_PRODUCTS, 'readwrite');
+    tx.objectStore(STORE_PRODUCTS).delete(code);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function saveSession(db, session) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_SESSIONS, 'readwrite');
+    tx.objectStore(STORE_SESSIONS).add(session);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function getAllSessions(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_SESSIONS, 'readonly');
+    const req = tx.objectStore(STORE_SESSIONS).getAll();
+    req.onsuccess = () => resolve((req.result || []).reverse());
     req.onerror = () => reject(req.error);
   });
 }

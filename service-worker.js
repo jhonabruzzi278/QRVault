@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qrvault-cache-v12';
+const CACHE_NAME = 'qrvault-cache-v15';
 const PRECACHE_URLS = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const PRECACHE_URLS = [
   './manifest.json',
   './css/styles.css',
   './js/error-handler.js',
+  './js/theme.js',
   './js/app.js',
   './js/db.js',
   './js/products-data.js',
