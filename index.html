@@ -2,8 +2,12 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#0f1720" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="QRVault" />
   <title>QRVault — Control de Inventario</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
@@ -29,6 +33,8 @@
           <p>Escanea los códigos QR de los productos para verificar cuáles existen en la base de datos de inventario.</p>
           <button id="start-scan-btn" class="btn btn--primary">📷 Escanear Código QR</button>
         </div>
+        <button id="install-btn" class="btn btn--secondary hidden">⬇️ Instalar QRVault</button>
+        <p id="ios-install-hint" class="install-hint hidden">Para instalarla: toca <strong>Compartir</strong> ⬆️ y luego <strong>"Agregar a inicio"</strong>.</p>
       </section>
 
       <section id="scan-screen" class="hidden">

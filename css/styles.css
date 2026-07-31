@@ -14,14 +14,60 @@
 
 * { box-sizing: border-box; }
 
+html {
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
   min-height: 100vh;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* App-like chrome: no visible scrollbars, no text-selection on UI controls,
+   no long-press callout/context menu on tappable elements. */
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+button, .btn, .top-link, .stat-row, h1, h2, h3, .brand, .legend {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+button, a, #start-scan-btn, #stop-scan-btn, #finish-btn, #reset-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .hidden { display: none !important; }
+
+/* Fade/slide-in applied to whichever screen becomes visible, so
+   switching views feels like a native transition instead of an
+   instant web-page swap. Triggered by app.js on switchScreen(). */
+.screen-enter {
+  animation: qv-screen-in 0.22s ease both;
+}
+
+@keyframes qv-screen-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.install-hint {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+  margin: 10px 0 0;
+}
 
 /* ---------------------------------------------------------------
    App shell: mobile-first single column. The sidebar renders as a

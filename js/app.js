@@ -23,6 +23,41 @@ function cacheEls() {
   els.reportFound = document.getElementById('report-found');
   els.reportMissing = document.getElementById('report-missing');
   els.reportMissingList = document.getElementById('report-missing-list');
+  els.installBtn = document.getElementById('install-btn');
+  els.iosInstallHint = document.getElementById('ios-install-hint');
+}
+
+function isRunningStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function setupInstallPrompt() {
+  if (isRunningStandalone() || !els.installBtn) return;
+
+  let deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    els.installBtn.classList.remove('hidden');
+  });
+
+  els.installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    els.installBtn.classList.add('hidden');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    els.installBtn.classList.add('hidden');
+  });
+
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (isIos && els.iosInstallHint) {
+    els.iosInstallHint.classList.remove('hidden');
+  }
 }
 
 function showToast(message, kind) {
@@ -37,6 +72,9 @@ function showToast(message, kind) {
 function switchScreen(screenEl) {
   [els.homeScreen, els.scanScreen, els.reportScreen].forEach(s => s.classList.add('hidden'));
   screenEl.classList.remove('hidden');
+  screenEl.classList.remove('screen-enter');
+  void screenEl.offsetWidth; // restart the CSS animation
+  screenEl.classList.add('screen-enter');
 }
 
 function renderScannedList() {
@@ -150,6 +188,7 @@ function resetSession() {
 async function init() {
   cacheEls();
   inventoryDb = await initInventoryDb();
+  setupInstallPrompt();
 
   els.startBtn.addEventListener('click', () => {
     switchScreen(els.scanScreen);
