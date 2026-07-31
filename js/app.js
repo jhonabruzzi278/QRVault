@@ -115,18 +115,42 @@ async function handleDecodedCode(rawText) {
   showToast(found ? `✔ ${code} — ${name}` : `✖ ${code} — no registrado`, found ? 'success' : 'error');
 }
 
-async function detectTorchSupport() {
+function detectTorchSupport() {
   try {
     const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
     const torchFeature = capabilities.torchFeature();
     if (torchFeature.isSupported()) {
       els.torchBtn.classList.remove('hidden');
-    } else {
-      els.torchBtn.classList.add('hidden');
+      return true;
     }
   } catch (err) {
-    els.torchBtn.classList.add('hidden');
+    // el track todavía no expone capabilities; se reintenta más abajo
   }
+  els.torchBtn.classList.add('hidden');
+  return false;
+}
+
+// Some Android/Chrome combinations don't report the "torch" capability on
+// the video track immediately after start() resolves — the capability only
+// becomes available once the stream is actually flowing frames. Re-check on
+// the video's "loadeddata"/"playing" events plus a couple of delayed
+// fallbacks instead of a single immediate check right after start().
+function scheduleTorchDetection() {
+  let found = false;
+  const attempt = () => {
+    if (found) return;
+    if (detectTorchSupport()) found = true;
+  };
+
+  const videoEl = els.reader.querySelector('video');
+  if (videoEl) {
+    videoEl.addEventListener('loadeddata', attempt, { once: true });
+    videoEl.addEventListener('playing', attempt, { once: true });
+  }
+
+  attempt();
+  setTimeout(attempt, 500);
+  setTimeout(attempt, 1500);
 }
 
 async function startCamera(facingMode) {
@@ -143,7 +167,8 @@ async function startCamera(facingMode) {
   currentFacingMode = facingMode;
   torchOn = false;
   els.torchBtn.textContent = '🔦 Linterna';
-  await detectTorchSupport();
+  els.torchBtn.classList.add('hidden');
+  scheduleTorchDetection();
   els.switchCameraBtn.classList.remove('hidden');
 }
 
