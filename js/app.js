@@ -252,8 +252,12 @@ async function startCamera(facingMode) {
   html5QrCode = new Html5Qrcode('reader');
   const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
+  // Requesting a low/default resolution makes some Android/Chrome camera
+  // pipelines fall back to a capture path that never reports "torch" in
+  // getCapabilities(), even on hardware that has it. Asking for a higher
+  // ideal resolution nudges the browser into the fuller-capability path.
   await html5QrCode.start(
-    { facingMode },
+    { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
     config,
     (decodedText) => handleDecodedCode(decodedText),
     () => {}
