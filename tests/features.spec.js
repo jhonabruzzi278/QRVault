@@ -1,63 +1,86 @@
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
+import { resetApp, scanCode } from './helpers.js';
 
 test('entrada manual de código agrega un producto escaneado', async ({ page }) => {
-  await page.goto('/index.html');
-  await page.waitForTimeout(500);
+  await resetApp(page);
+  await page.click('[data-testid="start-scan-btn"]');
 
-  await page.evaluate(() => switchScreen(document.getElementById('scan-screen')));
-  await page.fill('#manual-code-input', 'p001');
-  await page.click('#manual-code-btn');
+  await scanCode(page, 'p001');
 
-  await expect(page.locator('#scanned-count')).toHaveText('1');
-  await expect(page.locator('.scanned-item__code')).toHaveText('P001');
-  await expect(page.locator('#manual-code-input')).toHaveValue('');
+  await expect(page.locator('[data-testid="scanned-count"]')).toHaveText('1');
+  await expect(page.locator('[data-testid="scanned-item-code"]')).toHaveText('P001');
+  await expect(page.locator('[data-testid="manual-code-input"]')).toHaveValue('');
 });
 
-test('el toggle de tema cambia data-theme y persiste en localStorage', async ({ page }) => {
-  await page.goto('/index.html');
-  await page.waitForTimeout(500);
+test('el escáner reconoce un código de variante BASE-VARIANTE', async ({ page }) => {
+  await resetApp(page);
 
-  const initialTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
-  expect(initialTheme).toBe('dark');
+  await page.click('[data-testid="nav-catalog"]');
+  await page.click('[data-testid="new-product-btn"]');
+  await page.fill('[data-testid="pf-name"]', 'Gorra');
+  await page.fill('[data-testid="pf-code"]', 'V001');
+  await page.click('[data-testid="pf-add-variant"]');
+  await page.fill('[data-testid="pf-variant-code"]', 'm');
+  await page.fill('[data-testid="pf-variant-name"]', 'Mediana');
+  await page.click('[data-testid="pf-submit"]');
+  await expect(page.locator('[data-testid="label-preview-modal"]')).toBeVisible();
+  await expect(page.locator('[data-testid="print-label-code"]')).toHaveText('V001-M');
+  await page.click('[data-testid="label-preview-close-btn"]');
 
-  await page.click('#theme-toggle-btn');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.click('[data-testid="nav-scan"]');
+  await page.click('[data-testid="start-scan-btn"]');
+  await scanCode(page, 'v001-m');
+
+  await expect(page.locator('[data-testid="scanned-count"]')).toHaveText('1');
+  await expect(page.locator('[data-testid="scanned-item-status"]')).toHaveText('✔ Encontrado');
+});
+
+test('el toggle de tema cambia la clase dark del html y persiste en localStorage', async ({ page }) => {
+  await resetApp(page);
+
+  await expect(page.locator('html')).toHaveClass(/dark/);
+
+  await page.click('[data-testid="theme-toggle"]');
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
 
   const stored = await page.evaluate(() => localStorage.getItem('qrvault-theme'));
   expect(stored).toBe('light');
 
   await page.reload();
   await page.waitForTimeout(300);
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
 });
 
 test('finalizar escaneo guarda una sesión y aparece en el historial', async ({ page }) => {
-  await page.goto('/index.html');
-  await page.waitForTimeout(500);
+  await resetApp(page);
+  await page.click('[data-testid="start-scan-btn"]');
 
-  await page.evaluate(async () => {
-    for (const p of FULL_CATALOG) await handleDecodedCode(p.code);
-    buildReport();
-    await finishScanning();
-  });
+  const codes = Array.from({ length: 20 }, (_, i) => `P${String(i + 1).padStart(3, '0')}`);
+  for (const code of codes) {
+    await scanCode(page, code);
+  }
 
-  await page.click('#reset-btn');
-  await page.click('#nav-history-btn');
-  await expect(page.locator('.history-item')).toHaveCount(1);
-  await expect(page.locator('.history-item__stats')).toContainText('20 escaneados');
-  await expect(page.locator('.history-item__stats')).toContainText('15 encontrados');
-  await expect(page.locator('.history-item__missing')).toContainText('P016');
+  await page.click('[data-testid="finish-btn"]');
+  await expect(page.locator('[data-testid="report-total"]')).toHaveText('20');
+
+  await page.click('[data-testid="reset-btn"]');
+  await page.click('[data-testid="nav-history"]');
+
+  await expect(page.locator('[data-testid="history-item"]')).toHaveCount(1);
+  await expect(page.locator('[data-testid="history-item"]')).toContainText('20 escaneados');
+  await expect(page.locator('[data-testid="history-item"]')).toContainText('15 encontrados');
+  await expect(page.locator('[data-testid="history-item"]')).toContainText('P016');
 });
 
 test('exportar CSV genera un archivo con los productos escaneados', async ({ page }) => {
-  await page.goto('/index.html');
-  await page.waitForTimeout(500);
+  await resetApp(page);
+  await page.click('[data-testid="start-scan-btn"]');
+  await scanCode(page, 'P001');
+  await scanCode(page, 'P999');
+  await page.click('[data-testid="finish-btn"]');
+  await expect(page.locator('[data-testid="export-csv-btn"]')).toBeVisible();
 
   const csv = await page.evaluate(async () => {
-    await handleDecodedCode('P001');
-    await handleDecodedCode('P999');
-    buildReport();
-
     let capturedBlob = null;
     const origCreate = URL.createObjectURL;
     URL.createObjectURL = (blob) => {
@@ -67,11 +90,12 @@ test('exportar CSV genera un archivo con los productos escaneados', async ({ pag
     const origClick = HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click = function () {};
 
-    exportReportCsv();
+    document.querySelector('[data-testid="export-csv-btn"]').click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     URL.createObjectURL = origCreate;
     HTMLAnchorElement.prototype.click = origClick;
-    return capturedBlob.text();
+    return capturedBlob ? capturedBlob.text() : null;
   });
 
   expect(csv).toContain('codigo,nombre,estado');

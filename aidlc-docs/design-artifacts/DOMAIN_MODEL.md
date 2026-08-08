@@ -11,7 +11,9 @@
 
 **InventoryRecord** (`js/db.js`, IndexedDB object store `products`) — Entity con identidad = `code`:
 - Subconjunto de `Product` (los 15 registrados), persistido en IndexedDB (`keyPath: 'code'`).
-- Repository: funciones `initInventoryDb`, `seedInventoryIfEmpty`, `lookupProduct` en `js/db.js` actúan como Repository de acceso a `InventoryRecord`.
+- Repository: funciones `initInventoryDb`, `seedInventoryIfEmpty`, `lookupProduct`, `productCodeExists` en `js/db.js` actúan como Repository de acceso a `InventoryRecord`.
+- Los productos creados desde el formulario "Nuevo Producto" (`js/product-form.js`, `products.html`) agregan campos opcionales agnósticos a cualquier rubro: `category`, `unitType`, `hasIva`/`ivaPercent`/`priceWithoutTax`/`finalPrice`, `stock`/`minStock` (umbral de alerta de stock bajo) y `variants: [{ code, name, stock }]` para talles/colores/presentaciones con stock propio. No hay migración de esquema — IndexedDB no tipa el valor, y el catálogo demo sigue sin estos campos.
+- **Variante como etiqueta imprimible** (`js/labels.js`): cada variante se imprime como una etiqueta QR propia cuyo código escaneable es `"${code}-${variant.code}"`; el escáner (`js/app.js` → `resolveScannedProduct`) separa ese código compuesto para resolverlo contra el producto base y su variante.
 
 **ScannedItem** (`js/app.js` → `Map scannedProducts`) — Entity en memoria de la sesión de escaneo:
 - `code, name, found: boolean`

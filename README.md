@@ -1,39 +1,52 @@
-# QRVault — Control de Inventario mediante Códigos QR (PWA)
+# QRVault — Generador de Etiquetas QR y Lector de Inventario (PWA)
 
-Aplicación Web Progresiva (PWA) instalable en Android que escanea códigos QR de productos con la cámara del dispositivo, valida cada código contra una base de datos local (IndexedDB) y genera un reporte de escaneo (escaneados / encontrados / fuera de base de datos).
+Aplicación Web Progresiva (PWA) instalable en Android/desktop con dos funcionalidades core:
+
+1. **Generador de etiquetas**: alta de productos (nombre, código único, descripción, categoría, tipo de unidad, IVA con cálculo de precio, stock con alerta de stock bajo, variantes/talles con stock propio) y generación/impresión de etiquetas QR — una por producto, o una por variante.
+2. **Lector QR**: escanea con la cámara y valida cada código contra el inventario local (IndexedDB), incluyendo códigos de variante (`BASE-VARIANTE`).
 
 ## Stack
-- HTML5 + CSS3 + JavaScript vanilla (sin build step)
-- [html5-qrcode](https://github.com/mebjas/html5-qrcode) para el escaneo de cámara (vendorizado en `vendor/`)
-- [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) para generar los QR del catálogo de prueba (vendorizado en `vendor/`)
+- [Vite](https://vite.dev/) + React 19 + TypeScript
+- [Tailwind CSS v4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) (preset **Sera**, editorial) sobre primitivos Radix
+- [react-hook-form](https://react-hook-form.com/) + [zod](https://zod.dev/) para el formulario de producto
+- [html5-qrcode](https://github.com/mebjas/html5-qrcode) para el escaneo de cámara
+- [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) para generar los QR de etiquetas y catálogo
 - IndexedDB como base de datos local de inventario
-- Web App Manifest + Service Worker para instalación y funcionamiento offline
+- [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) (Workbox) para manifest + service worker offline-first
+- Tipografía self-hosted (`@fontsource-variable`) — sin CDNs externos, 100% offline
 
 ## Cómo correrlo localmente
-No requiere instalación de dependencias ni build. Sirve la carpeta como archivos estáticos, por ejemplo:
 
 ```bash
-python -m http.server 8765
+npm install
+npm run dev
 ```
 
-Luego abre `http://localhost:8765/index.html`. Para instalar como PWA o usar la cámara desde un celular, debe servirse por HTTPS (o accederse vía `localhost` en desarrollo).
+Abre `http://localhost:5173`. Para instalar como PWA o usar la cámara desde un celular, debe servirse por HTTPS (o accederse vía `localhost` en desarrollo).
+
+Build de producción + preview:
+
+```bash
+npm run build
+npm run preview
+```
 
 ## Uso
-1. Abre `products.html` para ver e imprimir los 20 códigos QR de prueba (P001–P020). Los productos P016–P020 están marcados como "no registrado".
-2. Abre `index.html` y presiona **Escanear Código QR**.
-3. Apunta la cámara a los QR generados en `products.html` (puedes tener ambas pantallas abiertas, una en el celular escaneando la pantalla de otra pestaña/dispositivo).
-4. Presiona **Finalizar y Ver Reporte** para ver el resumen.
+1. **Catálogo** (`/catalog`): crear productos con el formulario completo, imprimir su etiqueta QR (una por variante si aplica), buscar y dar de baja productos.
+2. **Escanear** (`/`): apuntar la cámara a un QR generado en el catálogo — se marca como encontrado o no registrado, con feedback sonoro/háptico.
+3. **Historial** (`/history`): sesiones de escaneo guardadas, con detalle de productos fuera de base de datos.
 
 ## Estructura del proyecto
 ```
-index.html        Pantalla de escaneo y reporte
-products.html     Catálogo de prueba: genera los 20 QR
-css/styles.css    Estilos
-js/               Lógica: catálogo, IndexedDB, escaneo/reporte
-vendor/           Librerías vendorizadas (html5-qrcode, qrcode-generator)
-icons/            Íconos PWA
-manifest.json     Web App Manifest
-service-worker.js Cache offline-first
+src/
+  main.tsx, App.tsx        Bootstrap, router, providers globales
+  components/               UI compartida (AppShell, QrScanner, ProductForm, etiquetas)
+  components/ui/            Primitivos shadcn/ui
+  pages/                     ScanPage, HistoryPage, CatalogPage
+  lib/                       db.ts, catalog-data.ts, labels.ts, scan-resolve.ts (lógica pura)
+  hooks/                     useInstallPrompt
+public/                     Íconos, fuentes, .well-known/assetlinks.json
+tests/                      Specs Playwright (data-testid)
 ```
 
 ## 📋 Documentación del Proyecto (AI-DLC)
@@ -46,4 +59,4 @@ Documentación completa en [`/aidlc-docs/`](./aidlc-docs/):
 - [Testing Strategy](./aidlc-docs/testing/TEST_STRATEGY.md)
 - [Deployment (pendiente)](./aidlc-docs/deployment/)
 
-Última auditoría: 2026-07-30
+Última auditoría: 2026-08-06

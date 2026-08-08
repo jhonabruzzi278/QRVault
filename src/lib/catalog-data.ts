@@ -1,6 +1,10 @@
-// Catálogo completo de 20 productos ficticios (usado para generar QR y mostrar nombres).
-// La "base de datos" real (IndexedDB) sólo contendrá los primeros 15 (ver db.js).
-const FULL_CATALOG = [
+// Catálogo demo de 20 productos ficticios (usado para generar QR y mostrar
+// nombres). La "base de datos" real (IndexedDB) sólo contiene los primeros
+// 15 al arrancar (ver db.ts) — el resto se puede cargar desde el formulario
+// "Nuevo Producto".
+import type { Product } from './db';
+
+export const FULL_CATALOG: Product[] = [
   { code: 'P001', name: 'Caramelos Verdes', description: 'Caramelos surtidos sabor menta, bolsa 200g.' },
   { code: 'P002', name: 'Yogurt de Fresa', description: 'Yogurt bebible sabor fresa, envase 1L.' },
   { code: 'P003', name: 'Galletas de Chocolate', description: 'Galletas rellenas de chocolate, paquete 150g.' },
@@ -23,5 +27,4 @@ const FULL_CATALOG = [
   { code: 'P020', name: 'Detergente Líquido', description: 'Detergente líquido para ropa, botella 1L.' },
 ];
 
-// Sólo los primeros 15 productos existen en la base de datos de inventario.
-const REGISTERED_CODES = FULL_CATALOG.slice(0, 15).map(p => p.code);
+export const REGISTERED_CODES: string[] = FULL_CATALOG.slice(0, 15).map((p) => p.code);

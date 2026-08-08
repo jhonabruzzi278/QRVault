@@ -1,20 +1,25 @@
 # Test Strategy
 
-## Framework Detectado
-Ninguno instalado todavía (no hay `package.json` ni test runner). ⚠️ Gap real — no un dato pendiente de extraer, sino algo que genuinamente falta.
+## Framework
+Playwright, corriendo contra el build de producción real (`npm run build && npm run preview`, ver `playwright.config.js`) — no contra el dev server, para detectar problemas específicos de build (chunking, rutas, CSP) que no aparecen en modo desarrollo.
 
-## Verificación realizada en esta sesión (manual, no automatizada)
-En ausencia de un framework de tests, se verificó el comportamiento real de la app ejecutando sus funciones (`handleDecodedCode`, `buildReport`, `resetSession`) directamente en el navegador contra los 3 casos de prueba oficiales del brief (ver `story-artifacts/ACCEPTANCE_CRITERIA.md`). Los tres pasaron.
+## Cobertura Actual
+18 specs E2E en `tests/`, organizados por área:
+- `tests/scan.spec.js` — casos de aceptación del escáner (15/16/20 productos escaneados, split registrados/no registrados, no duplica reconteo).
+- `tests/features.spec.js` — entrada manual, resolución de códigos de variante (`BASE-VARIANTE`), toggle de tema, historial de sesiones, export CSV.
+- `tests/inventory.spec.js` — alta de producto (con/sin IVA, con/sin variantes), validación de código duplicado, insignia de stock bajo, búsqueda, baja de producto.
 
-## Coverage Actual
-No se pudo medir — no hay comando de test configurado. Ejecutar manualmente si se agrega un test runner (sugerido: Vitest + `fake-indexeddb` para simular IndexedDB en Node, o Playwright para e2e real con cámara simulada vía `getUserMedia` mockeado).
+Los tests usan atributos `data-testid` (no IDs/clases CSS) para no ser frágiles ante cambios de estilo del lado de Tailwind/shadcn — ver `tests/helpers.js` (`resetApp`, `scanCode`) para los helpers compartidos.
+
+## Notas de estabilidad
+- `workers: 4` y `timeout: 60_000` en `playwright.config.js`: con el default (workers = núcleos disponibles) la suite es flaky por contención de recursos en máquinas cargadas (varios Chromium reales en paralelo contra IndexedDB), no por fallos funcionales — se verificó corriendo los tests fallidos en aislamiento (`--workers=1`), donde siempre pasan.
+- El lector QR no tiene cámara real en CI/sandbox — los tests ejercitan el flujo de escaneo vía el input de entrada manual (`manual-code-input`), que comparte toda la lógica de resolución con la cámara (`resolveScannedProduct`).
 
 ## Gaps Identificados
-- Sin tests unitarios para `js/db.js` (lookup, seed) ni `js/app.js` (dedupe, reporte).
-- Sin test E2E real con Playwright que abra la cámara simulada y escanee un QR generado en pantalla.
-- Sin prueba en dispositivo Android físico (cámara real, instalación PWA real, comportamiento offline real tras "Add to Home Screen").
+- Sin tests unitarios aislados para `src/lib/*.ts` (corren indirectamente vía los E2E, pero no hay Vitest configurado para testearlos en aislamiento).
+- Sin prueba en dispositivo Android físico (cámara real, instalación PWA real, offline real tras "Agregar a inicio").
+- Sin test de Lighthouse/CWV automatizado.
 
 ## Recomendación (roadmap)
-1. Agregar Vitest + `fake-indexeddb` para cubrir `js/db.js` y la lógica de `js/app.js` sin necesitar navegador.
-2. Agregar un test Playwright que cargue `products.html`, capture el `data`/texto de un QR generado, y lo inyecte como resultado simulado de `Html5Qrcode` en `index.html`, verificando los 3 casos de aceptación de forma automatizada.
-3. Prueba manual en un dispositivo Android real antes de considerar el flujo cerrado.
+1. Agregar Vitest para cubrir `src/lib/db.ts`, `labels.ts` y `scan-resolve.ts` en aislamiento (más rápido que E2E completo para la lógica pura).
+2. Prueba manual en un dispositivo Android real antes de considerar el flujo de instalación PWA cerrado.

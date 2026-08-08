@@ -3,3 +3,5 @@ node_modules/
 .DS_Store
 playwright-report/
 test-results/
+dist/
+*.tsbuildinfo

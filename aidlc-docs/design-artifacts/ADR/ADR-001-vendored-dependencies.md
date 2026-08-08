@@ -1,7 +1,7 @@
 # ADR-001: Vendorizar dependencias JS en lugar de cargarlas por CDN
 
 ## Status
-Aceptado
+Aceptado — **superseded parcialmente por [ADR-002](./ADR-002-react-shadcn-migration.md)**: la app pasó a tener build step (Vite), así que `html5-qrcode` y `qrcode-generator` ahora son dependencias npm reales en vez de estar vendorizadas a mano en `/vendor/`. Se mantiene este documento porque el razonamiento (por qué evitar CDN, por qué esas librerías puntuales) sigue vigente.
 
 ## Context
 El brief pide usar `html5-qrcode` para el escaneo. La primera implementación cargó esta librería (y `qrcode` para generar los QR de prueba) vía `<script src="https://unpkg.com/...">`. Al verificar la app en el navegador de prueba, los scripts de CDN no se ejecutaban (globals `Html5Qrcode`/`QRCode` quedaban `undefined`) aunque la red saliente sí funcionaba para navegación directa — indicando una restricción del entorno de verificación frente a `<script src>` cross-origin.
