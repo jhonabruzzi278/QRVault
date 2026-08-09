@@ -161,13 +161,16 @@
   }
 
   body.printing-labels #label-print-area {
-    display: block !important;
+    display: grid !important;
+    grid-template-columns: repeat(var(--print-columns, 3), 1fr);
+    gap: 8px;
+    align-items: start;
   }
 
   #label-print-area [data-testid='print-label'] {
-    display: inline-block;
-    width: 220px;
-    margin: 0 10px 10px 0;
+    width: auto;
+    margin: 0;
+    padding: 6px !important;
     break-inside: avoid;
     background: #fff !important;
     color: #000 !important;

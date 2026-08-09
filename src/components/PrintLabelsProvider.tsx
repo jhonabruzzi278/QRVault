@@ -1,7 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { LabelCard } from '@/components/LabelCard';
+import { PrintOptionsDialog } from '@/components/PrintOptionsDialog';
 import type { LabelUnit } from '@/lib/labels';
+
+const COLUMNS_STORAGE_KEY = 'qrvault-print-columns';
+const DEFAULT_COLUMNS = 3;
+
+function loadStoredColumns(): number {
+  const stored = Number(localStorage.getItem(COLUMNS_STORAGE_KEY));
+  return stored > 0 ? stored : DEFAULT_COLUMNS;
+}
 
 interface PrintLabelsContextValue {
   printLabels: (units: LabelUnit[]) => void;
@@ -10,33 +19,53 @@ interface PrintLabelsContextValue {
 const PrintLabelsContext = createContext<PrintLabelsContextValue | null>(null);
 
 export function PrintLabelsProvider({ children }: { children: ReactNode }) {
-  const [units, setUnits] = useState<LabelUnit[] | null>(null);
+  const [pendingUnits, setPendingUnits] = useState<LabelUnit[] | null>(null);
+  const [printUnits, setPrintUnits] = useState<LabelUnit[] | null>(null);
+  const [columns, setColumns] = useState<number>(loadStoredColumns);
 
   useEffect(() => {
-    if (!units || units.length === 0) return;
+    if (!printUnits || printUnits.length === 0) return;
 
     document.body.classList.add('printing-labels');
     window.print();
 
     const cleanup = () => {
       document.body.classList.remove('printing-labels');
-      setUnits(null);
+      setPrintUnits(null);
     };
     window.addEventListener('afterprint', cleanup, { once: true });
     return () => window.removeEventListener('afterprint', cleanup);
-  }, [units]);
+  }, [printUnits]);
 
   const printLabels = useCallback((next: LabelUnit[]) => {
     if (next.length === 0) return;
-    setUnits(next);
+    setPendingUnits(next);
   }, []);
+
+  const handleColumnsChange = (next: number) => {
+    setColumns(next);
+    localStorage.setItem(COLUMNS_STORAGE_KEY, String(next));
+  };
+
+  const handleConfirmPrint = () => {
+    setPrintUnits(pendingUnits);
+    setPendingUnits(null);
+  };
 
   return (
     <PrintLabelsContext.Provider value={{ printLabels }}>
       {children}
+      <PrintOptionsDialog
+        open={pendingUnits !== null}
+        labelCount={pendingUnits?.length ?? 0}
+        columns={columns}
+        onColumnsChange={handleColumnsChange}
+        onCancel={() => setPendingUnits(null)}
+        onConfirm={handleConfirmPrint}
+      />
       {createPortal(
-        <div id="label-print-area">
-          {units?.map((unit) => <LabelCard key={unit.printCode} unit={unit} />)}
+        <div id="label-print-area" style={{ '--print-columns': columns } as React.CSSProperties}>
+          {printUnits?.map((unit) => <LabelCard key={unit.printCode} unit={unit} />)}
         </div>,
         document.body,
       )}

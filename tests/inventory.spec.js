@@ -64,8 +64,26 @@ test('crear un producto con variantes genera códigos BASE-VARIANTE y permite im
   await expect(page.locator('[data-testid="print-label-code"]')).toHaveText('R001-S');
 
   await page.click('[data-testid="label-preview-print"]');
+  await expect(page.locator('[data-testid="print-options-modal"]')).toBeVisible();
+  await page.click('[data-testid="print-columns-4"]');
+  await page.click('[data-testid="print-options-confirm"]');
+
   const printed = await page.evaluate(() => window.__printed);
   expect(printed).toBe(true);
+  const storedColumns = await page.evaluate(() => localStorage.getItem('qrvault-print-columns'));
+  expect(storedColumns).toBe('4');
+});
+
+test('el diálogo de impresión recuerda la última cantidad de columnas elegida', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('qrvault-print-columns', '5'));
+  await page.reload();
+  await page.waitForTimeout(300);
+
+  const card = page.locator('[data-testid="product-card"][data-code="P001"]');
+  await card.locator('[data-testid="product-card-print"]').click();
+
+  await expect(page.locator('[data-testid="print-options-modal"]')).toBeVisible();
+  await expect(page.locator('[data-testid="print-columns-5"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('un producto con stock igual o menor al mínimo muestra la insignia de stock bajo', async ({ page }) => {

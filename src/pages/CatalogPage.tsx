@@ -125,7 +125,7 @@ export function CatalogPage() {
       <ProductGrid
         products={filtered}
         onDelete={handleDelete}
-        onPrint={(product) => setPreviewUnits(buildLabelUnits(product))}
+        onPrint={(product) => printLabels(buildLabelUnits(product))}
       />
 
       <ProductFormDialog open={formOpen} onOpenChange={setFormOpen} onSubmit={handleCreate} />
