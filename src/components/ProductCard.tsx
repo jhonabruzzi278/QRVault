@@ -40,10 +40,10 @@ export function ProductCard({ product, onDelete, onPrint }: ProductCardProps) {
           className="mx-auto [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:w-full [&_svg]:max-w-28"
           dangerouslySetInnerHTML={{ __html: qrSvg }}
         />
-        <div className="mt-2 font-bold" data-testid="product-card-code">
+        <div className="mt-2 font-bold break-words" data-testid="product-card-code">
           {product.code}
         </div>
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm break-words text-muted-foreground">
           {product.name}
           {!product.isRegistered && ' (no registrado)'}
         </div>
@@ -58,7 +58,7 @@ export function ProductCard({ product, onDelete, onPrint }: ProductCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="w-full"
+            className="h-auto min-h-9 w-full flex-wrap gap-1 py-1.5 whitespace-normal wrap-anywhere"
             onClick={() => onPrint(product)}
             data-testid="product-card-print"
           >
@@ -68,7 +68,7 @@ export function ProductCard({ product, onDelete, onPrint }: ProductCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="w-full text-destructive"
+            className="h-auto min-h-9 w-full flex-wrap gap-1 py-1.5 whitespace-normal wrap-anywhere text-destructive"
             onClick={() => onDelete(product.code)}
             data-testid="product-card-delete"
           >

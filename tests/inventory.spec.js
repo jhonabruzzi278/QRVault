@@ -138,3 +138,30 @@ test('el buscador filtra por código y por nombre', async ({ page }) => {
   await expect(page.locator('[data-testid="product-card"]')).toHaveCount(0);
   await expect(page.locator('[data-testid="no-results"]')).toBeVisible();
 });
+
+test('un nombre de producto largo y sin espacios no desborda la tarjeta en mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+
+  await page.click('[data-testid="new-product-btn"]');
+  await page.fill('[data-testid="pf-name"]', 'Shampoodeacondicionadorreparadorintensivoconqueratinayaceitedeargan500ml');
+  await page.fill('[data-testid="pf-code"]', 'LONGNAME01');
+  await page.click('[data-testid="pf-submit"]');
+  await page.click('[data-testid="label-preview-close-btn"]');
+
+  const card = page.locator('[data-testid="product-card"][data-code="LONGNAME01"]');
+  await expect(card).toBeVisible();
+
+  const overflow = await card.evaluate((el) => {
+    let anyOverflow = false;
+    el.querySelectorAll('*').forEach((child) => {
+      if (child.scrollWidth > child.clientWidth + 1 && child.clientWidth > 0) anyOverflow = true;
+    });
+    return anyOverflow;
+  });
+  expect(overflow).toBe(false);
+
+  const docOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(docOverflow).toBe(false);
+});
