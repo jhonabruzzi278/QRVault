@@ -196,7 +196,18 @@ function Sidebar({
             <SheetTitle>Sidebar</SheetTitle>
             <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          {/* El sheet es position:fixed y no hereda el padding de safe-area
+              del body — sin esto el header/footer quedan bajo el notch o el
+              home indicator en iPhone. */}
+          <div
+            className="flex h-full w-full flex-col"
+            style={{
+              paddingTop: "env(safe-area-inset-top)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }}
+          >
+            {children}
+          </div>
         </SheetContent>
       </Sheet>
     )
@@ -240,6 +251,10 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
           className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-none group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          style={{
+            paddingTop: "env(safe-area-inset-top)",
+            paddingBottom: "env(safe-area-inset-bottom)",
+          }}
         >
           {children}
         </div>

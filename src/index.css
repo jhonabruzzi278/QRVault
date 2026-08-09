@@ -142,6 +142,11 @@
     }
   body {
     @apply bg-background text-foreground;
+    /* iPhone con notch/Dynamic Island: sin esto el header y el contenido
+       quedan pegados contra el borde superior (viewport-fit=cover en
+       index.html expande la app debajo del status bar). */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
     }
   html {
     @apply font-sans;
