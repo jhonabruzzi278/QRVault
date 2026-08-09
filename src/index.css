@@ -153,6 +153,13 @@
     }
 }
 
+/* Motion de entrada: se maneja con la clase transition-[...] de Tailwind +
+   el hook useEntrance (cambia opacity/translate un frame después del mount),
+   NO con @keyframes/animation ni @starting-style — en pruebas, ambos se
+   quedan atascados en el primer frame en este proyecto (mismo síntoma que
+   tuvo el Dialog/Sheet con tw-animate-css), mientras que una `transition`
+   disparada por un cambio de estado sí resuelve de forma confiable. */
+
 /* Etiquetas QR imprimibles: portal en #label-print-area (fuera de #root,
    ver PrintLabelsProvider.tsx). Sólo se muestra cuando body.printing-labels
    está activo, para no interferir con Ctrl+P normal. */

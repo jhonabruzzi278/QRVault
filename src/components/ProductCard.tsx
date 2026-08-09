@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useEntrance } from '@/hooks/useEntrance';
 import type { Product } from '@/lib/db';
 
 export interface CatalogProduct extends Product {
@@ -26,12 +27,17 @@ export function ProductCard({ product, onDelete, onPrint }: ProductCardProps) {
   }, [product.code]);
 
   const isLowStock = product.minStock != null && product.stock != null && product.stock <= product.minStock;
+  const shown = useEntrance();
 
   return (
     <Card
       data-testid="product-card"
       data-code={product.code}
-      className={cn(!product.isRegistered && 'ring-2 ring-warning ring-dashed')}
+      data-open={shown || undefined}
+      className={cn(
+        'translate-y-2.5 opacity-0 transition-[opacity,transform,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:shadow-lg data-open:translate-y-0 data-open:opacity-100',
+        !product.isRegistered && 'ring-2 ring-warning ring-dashed',
+      )}
     >
       <CardContent className="text-center">
         {/* qrSvg viene de qrcode-generator a partir de product.code (código interno), no de HTML/input de usuario. */}
