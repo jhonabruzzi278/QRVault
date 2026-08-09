@@ -68,7 +68,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Sidebar>
         <SidebarInset>
           <header className="flex items-center gap-2 border-b border-border px-4 py-3 md:hidden">
-            <SidebarTrigger />
+            <SidebarTrigger data-testid="sidebar-trigger" />
             <span className="font-heading text-lg font-bold tracking-widest uppercase">QRVault</span>
           </header>
           <div className="flex-1 p-4 md:p-8">{children}</div>

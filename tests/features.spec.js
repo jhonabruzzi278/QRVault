@@ -12,6 +12,20 @@ test('entrada manual de código agrega un producto escaneado', async ({ page }) 
   await expect(page.locator('[data-testid="manual-code-input"]')).toHaveValue('');
 });
 
+test('en mobile, el trigger del sidebar despliega el menú y queda visible (no atascado en opacidad 0)', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await resetApp(page);
+
+  await page.click('[data-testid="sidebar-trigger"]');
+
+  const nav = page.locator('[data-testid="nav-catalog"]');
+  await expect(nav).toBeVisible();
+  await expect(nav).toHaveCSS('opacity', '1');
+
+  await nav.click();
+  await expect(page).toHaveURL(/\/catalog$/);
+});
+
 test('el escáner reconoce un código de variante BASE-VARIANTE', async ({ page }) => {
   await resetApp(page);
 
