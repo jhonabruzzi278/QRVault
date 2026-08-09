@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import qrcodeGenerator from 'qrcode-generator';
-import { PrinterIcon, Trash2Icon } from 'lucide-react';
+import { PackagePlusIcon, PencilIcon, PrinterIcon, Trash2Icon } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,9 +16,11 @@ interface ProductCardProps {
   product: CatalogProduct;
   onDelete: (code: string) => void;
   onPrint: (product: CatalogProduct) => void;
+  onAdjustStock: (product: CatalogProduct) => void;
+  onEdit: (product: CatalogProduct) => void;
 }
 
-export function ProductCard({ product, onDelete, onPrint }: ProductCardProps) {
+export function ProductCard({ product, onDelete, onPrint, onAdjustStock, onEdit }: ProductCardProps) {
   const qrSvg = useMemo(() => {
     const qr = qrcodeGenerator(0, 'M');
     qr.addData(product.code);
@@ -40,12 +42,21 @@ export function ProductCard({ product, onDelete, onPrint }: ProductCardProps) {
       )}
     >
       <CardContent className="text-center">
-        {/* qrSvg viene de qrcode-generator a partir de product.code (código interno), no de HTML/input de usuario. */}
-        <div
-          data-testid="product-card-qr"
-          className="mx-auto [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:w-full [&_svg]:max-w-28"
-          dangerouslySetInnerHTML={{ __html: qrSvg }}
-        />
+        {product.image ? (
+          <img
+            src={product.image}
+            alt={product.name}
+            data-testid="product-card-image"
+            className="mx-auto aspect-square w-full max-w-28 rounded-md object-cover"
+          />
+        ) : (
+          // qrSvg viene de qrcode-generator a partir de product.code (código interno), no de HTML/input de usuario.
+          <div
+            data-testid="product-card-qr"
+            className="mx-auto [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:w-full [&_svg]:max-w-28"
+            dangerouslySetInnerHTML={{ __html: qrSvg }}
+          />
+        )}
         <div className="mt-2 font-bold break-words" data-testid="product-card-code">
           {product.code}
         </div>
@@ -61,6 +72,26 @@ export function ProductCard({ product, onDelete, onPrint }: ProductCardProps) {
       </CardContent>
       {product.isRegistered && (
         <CardFooter className="flex flex-col gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto min-h-9 w-full flex-wrap gap-1 py-1.5 whitespace-normal wrap-anywhere"
+            onClick={() => onEdit(product)}
+            data-testid="product-card-edit"
+          >
+            <PencilIcon />
+            Editar
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto min-h-9 w-full flex-wrap gap-1 py-1.5 whitespace-normal wrap-anywhere"
+            onClick={() => onAdjustStock(product)}
+            data-testid="product-card-adjust-stock"
+          >
+            <PackagePlusIcon />
+            Ajustar stock
+          </Button>
           <Button
             variant="ghost"
             size="sm"

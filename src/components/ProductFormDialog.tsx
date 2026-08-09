@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { PlusIcon, Trash2Icon } from 'lucide-react';
+import { ImageIcon, PlusIcon, Trash2Icon, UploadIcon } from 'lucide-react';
 import {
   Dialog,
   DialogClose,
@@ -32,6 +32,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { fileToCompressedDataUrl } from '@/lib/image';
 import type { Product, ProductVariant } from '@/lib/db';
 
 const variantSchema = z.object({
@@ -54,6 +55,7 @@ const productFormSchema = z
     stock: z.coerce.number().min(0),
     minStock: z.coerce.number().min(0),
     variants: z.array(variantSchema),
+    image: z.string(),
   })
   .refine(
     (data) => {
@@ -78,13 +80,32 @@ const DEFAULT_VALUES: ProductFormValues = {
   stock: 0,
   minStock: 5,
   variants: [],
+  image: '',
 };
 
 function round2(value: number): number {
   return Math.round((Number(value) || 0) * 100) / 100;
 }
 
-export function valuesToProduct(values: ProductFormValues): Product {
+function productToValues(product: Product): ProductFormValues {
+  return {
+    name: product.name,
+    code: product.code,
+    description: product.description ?? '',
+    category: product.category ?? '',
+    unitType: product.unitType ?? 'unitario',
+    hasIva: product.hasIva ?? false,
+    ivaPercent: product.ivaPercent ?? 21,
+    priceWithoutTax: product.priceWithoutTax ?? 0,
+    finalPrice: product.finalPrice ?? 0,
+    stock: product.stock ?? 0,
+    minStock: product.minStock ?? 0,
+    variants: (product.variants ?? []).map((v) => ({ code: v.code, name: v.name, stock: v.stock })),
+    image: product.image ?? '',
+  };
+}
+
+export function valuesToProduct(values: ProductFormValues, existing?: Product | null): Product {
   const variants: ProductVariant[] = values.variants.map((v) => ({
     code: v.code.trim().toUpperCase(),
     name: v.name.trim(),
@@ -104,17 +125,23 @@ export function valuesToProduct(values: ProductFormValues): Product {
     stock: variants.length > 0 ? variants.reduce((sum, v) => sum + v.stock, 0) : values.stock,
     minStock: values.minStock,
     variants,
-    createdAt: new Date().toISOString(),
+    image: values.image || undefined,
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
   };
 }
 
 interface ProductFormDialogProps {
   open: boolean;
+  product: Product | null;
   onOpenChange: (open: boolean) => void;
   onSubmit: (product: Product) => Promise<{ duplicateCode?: boolean }>;
 }
 
-export function ProductFormDialog({ open, onOpenChange, onSubmit }: ProductFormDialogProps) {
+export function ProductFormDialog({ open, product, onOpenChange, onSubmit }: ProductFormDialogProps) {
+  const isEdit = product !== null;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageProcessing, setImageProcessing] = useState(false);
+
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: DEFAULT_VALUES,
@@ -123,8 +150,12 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit }: ProductFormD
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'variants' });
 
   useEffect(() => {
-    if (open) form.reset(DEFAULT_VALUES);
-  }, [open, form]);
+    if (!open) return;
+    form.reset(product ? productToValues(product) : DEFAULT_VALUES);
+    // Sólo debe reiniciarse al abrir el diálogo, no en cada re-render mientras
+    // el usuario está completando el formulario.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, product?.code]);
 
   const hasIva = form.watch('hasIva');
   const ivaPercent = form.watch('ivaPercent');
@@ -146,8 +177,8 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit }: ProductFormD
   }
 
   async function handleSubmit(values: ProductFormValues) {
-    const product = valuesToProduct(values);
-    const result = await onSubmit(product);
+    const built = valuesToProduct(values, product);
+    const result = await onSubmit(built);
     if (result.duplicateCode) {
       form.setError('code', { message: 'Este código ya existe' });
       return;
@@ -155,11 +186,23 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit }: ProductFormD
     onOpenChange(false);
   }
 
+  async function handleImageSelect(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    setImageProcessing(true);
+    try {
+      const dataUrl = await fileToCompressedDataUrl(file);
+      form.setValue('image', dataUrl, { shouldDirty: true });
+    } finally {
+      setImageProcessing(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-testid="product-modal" className="max-h-[90vh] sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Nuevo Producto</DialogTitle>
+          <DialogTitle>{isEdit ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -187,9 +230,81 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit }: ProductFormD
                     <FormItem>
                       <FormLabel>Código único</FormLabel>
                       <FormControl>
-                        <Input data-testid="pf-code" autoComplete="off" className="uppercase" {...field} />
+                        <Input
+                          data-testid="pf-code"
+                          autoComplete="off"
+                          className="uppercase"
+                          disabled={isEdit}
+                          {...field}
+                        />
                       </FormControl>
+                      {isEdit && (
+                        <FormDescription>El código no se puede modificar una vez creado.</FormDescription>
+                      )}
                       <FormMessage data-testid="pf-code-error" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="image"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Foto del producto (opcional)</FormLabel>
+                      <FormControl>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {field.value ? (
+                            <img
+                              src={field.value}
+                              alt="Vista previa"
+                              data-testid="pf-image-preview"
+                              className="h-20 w-20 rounded-md border border-border object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-20 w-20 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground">
+                              <ImageIcon />
+                            </div>
+                          )}
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={imageProcessing}
+                              onClick={() => fileInputRef.current?.click()}
+                              data-testid="pf-image-upload-btn"
+                            >
+                              <UploadIcon />
+                              {imageProcessing ? 'Procesando...' : field.value ? 'Cambiar foto' : 'Subir foto'}
+                            </Button>
+                            {field.value && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive"
+                                onClick={() => form.setValue('image', '', { shouldDirty: true })}
+                                data-testid="pf-image-remove-btn"
+                              >
+                                <Trash2Icon />
+                                Quitar foto
+                              </Button>
+                            )}
+                          </div>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            data-testid="pf-image-input"
+                            onChange={(e) => {
+                              handleImageSelect(e.target.files);
+                              e.target.value = '';
+                            }}
+                          />
+                        </div>
+                      </FormControl>
                     </FormItem>
                   )}
                 />
@@ -471,7 +586,7 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit }: ProductFormD
                 </Button>
               </DialogClose>
               <Button type="submit" data-testid="pf-submit">
-                Crear Producto
+                {isEdit ? 'Guardar Cambios' : 'Crear Producto'}
               </Button>
             </DialogFooter>
           </form>

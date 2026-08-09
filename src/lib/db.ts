@@ -22,6 +22,7 @@ export interface Product {
   stock?: number;
   minStock?: number;
   variants?: ProductVariant[];
+  image?: string;
   createdAt?: string;
 }
 
