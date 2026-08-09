@@ -22,6 +22,7 @@ export function PrintLabelsProvider({ children }: { children: ReactNode }) {
   const [pendingUnits, setPendingUnits] = useState<LabelUnit[] | null>(null);
   const [printUnits, setPrintUnits] = useState<LabelUnit[] | null>(null);
   const [columns, setColumns] = useState<number>(loadStoredColumns);
+  const [copies, setCopies] = useState<number>(1);
 
   useEffect(() => {
     if (!printUnits || printUnits.length === 0) return;
@@ -39,6 +40,7 @@ export function PrintLabelsProvider({ children }: { children: ReactNode }) {
 
   const printLabels = useCallback((next: LabelUnit[]) => {
     if (next.length === 0) return;
+    setCopies(1);
     setPendingUnits(next);
   }, []);
 
@@ -48,7 +50,10 @@ export function PrintLabelsProvider({ children }: { children: ReactNode }) {
   };
 
   const handleConfirmPrint = () => {
-    setPrintUnits(pendingUnits);
+    if (!pendingUnits) return;
+    const expanded =
+      copies <= 1 ? pendingUnits : pendingUnits.flatMap((unit) => Array.from({ length: copies }, () => unit));
+    setPrintUnits(expanded);
     setPendingUnits(null);
   };
 
@@ -60,12 +65,14 @@ export function PrintLabelsProvider({ children }: { children: ReactNode }) {
         labelCount={pendingUnits?.length ?? 0}
         columns={columns}
         onColumnsChange={handleColumnsChange}
+        copies={copies}
+        onCopiesChange={setCopies}
         onCancel={() => setPendingUnits(null)}
         onConfirm={handleConfirmPrint}
       />
       {createPortal(
         <div id="label-print-area" style={{ '--print-columns': columns } as React.CSSProperties}>
-          {printUnits?.map((unit) => <LabelCard key={unit.printCode} unit={unit} />)}
+          {printUnits?.map((unit, index) => <LabelCard key={`${unit.printCode}-${index}`} unit={unit} />)}
         </div>,
         document.body,
       )}

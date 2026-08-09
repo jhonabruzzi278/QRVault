@@ -86,6 +86,25 @@ test('el diálogo de impresión recuerda la última cantidad de columnas elegida
   await expect(page.locator('[data-testid="print-columns-5"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('imprimir varias copias de la misma etiqueta genera esa cantidad de etiquetas', async ({ page }) => {
+  await page.evaluate(() => {
+    window.print = () => {
+      window.__printedLabelCount = document.querySelectorAll('#label-print-area [data-testid="print-label"]').length;
+    };
+  });
+
+  const card = page.locator('[data-testid="product-card"][data-code="P001"]');
+  await card.locator('[data-testid="product-card-print"]').click();
+
+  await expect(page.locator('[data-testid="print-options-modal"]')).toBeVisible();
+  await page.fill('[data-testid="print-copies-input"]', '8');
+  await expect(page.locator('[data-testid="print-options-summary"]')).toContainText('8 etiquetas en total');
+  await page.click('[data-testid="print-options-confirm"]');
+
+  const printedLabelCount = await page.evaluate(() => window.__printedLabelCount);
+  expect(printedLabelCount).toBe(8);
+});
+
 test('un producto con stock igual o menor al mínimo muestra la insignia de stock bajo', async ({ page }) => {
   await page.click('[data-testid="new-product-btn"]');
   await page.fill('[data-testid="pf-name"]', 'Producto Bajo Stock');
